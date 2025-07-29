@@ -10,6 +10,9 @@ export const useNotifications = () => {
   return context;
 };
 
+// Alias para compatibilidade
+export const useNotification = useNotifications;
+
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
 

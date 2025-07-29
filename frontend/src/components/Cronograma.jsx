@@ -4,7 +4,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Clock, User, Filter, Calendar } from 'lucide-react'
-import agendaData from '../data/agenda.json'
+import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
+import { Loading } from './ui/loading'
+import { ErrorMessage } from './ui/error'
 
 const categoriasCores = {
   'gestao': 'bg-blue-500',
@@ -20,25 +22,46 @@ function Cronograma() {
   const [funcionarioSelecionado, setFuncionarioSelecionado] = useState('todos')
   const [visualizacao, setVisualizacao] = useState('timeline') // timeline ou grade
 
+  // Carrega dados da API
+  const { data: funcionarios, loading: loadingFuncionarios, error: errorFuncionarios, refetch: refetchFuncionarios } = useFuncionarios()
+  const { data: tarefas, loading: loadingTarefas, error: errorTarefas, refetch: refetchTarefas } = useTarefas()
+  const { data: agenda, loading: loadingAgenda, error: errorAgenda, refetch: refetchAgenda } = useAgenda()
+
+  // Estados de loading e error
+  const isLoading = loadingFuncionarios || loadingTarefas || loadingAgenda
+  const hasError = errorFuncionarios || errorTarefas || errorAgenda
+  const error = errorFuncionarios || errorTarefas || errorAgenda
+
+  // Função para recarregar todos os dados
+  const refetchAll = () => {
+    refetchFuncionarios()
+    refetchTarefas()
+    refetchAgenda()
+  }
+
   // Horários únicos ordenados
   const horarios = useMemo(() => {
-    const horariosSet = new Set(agendaData.agenda.map(item => item.horario))
+    if (!agenda) return []
+    const horariosSet = new Set(agenda.map(item => item.horario))
     return Array.from(horariosSet).sort()
-  }, [])
+  }, [agenda])
 
   // Dados filtrados
   const dadosFiltrados = useMemo(() => {
+    if (!agenda) return []
     if (funcionarioSelecionado === 'todos') {
-      return agendaData.agenda
+      return agenda
     }
-    return agendaData.agenda.filter(item => item.funcionario === funcionarioSelecionado)
-  }, [funcionarioSelecionado])
+    return agenda.filter(item => item.funcionario === funcionarioSelecionado)
+  }, [agenda, funcionarioSelecionado])
 
   // Organizar dados por funcionário e horário
   const cronogramaPorFuncionario = useMemo(() => {
+    if (!funcionarios || !tarefas) return {}
+    
     const resultado = {}
     
-    agendaData.funcionarios.forEach(funcionario => {
+    funcionarios.forEach(funcionario => {
       resultado[funcionario.id] = {
         ...funcionario,
         tarefas: {}
@@ -51,7 +74,7 @@ function Cronograma() {
     
     dadosFiltrados.forEach(item => {
       if (resultado[item.funcionario]) {
-        const tarefa = agendaData.tarefas.find(t => t.id === item.tarefa)
+        const tarefa = tarefas.find(t => t.id === item.tarefa)
         resultado[item.funcionario].tarefas[item.horario] = {
           ...item,
           tarefaInfo: tarefa
@@ -60,7 +83,7 @@ function Cronograma() {
     })
     
     return resultado
-  }, [dadosFiltrados, horarios])
+  }, [funcionarios, tarefas, dadosFiltrados, horarios])
 
   const TarefaCard = ({ tarefa, horario }) => {
     if (!tarefa) {
@@ -187,13 +210,53 @@ function Cronograma() {
     </Card>
   )
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Cronograma</h2>
+          <Loading message="Carregando cronograma..." />
+        </div>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-6 gap-3">
+                  {Array.from({ length: 6 }).map((_, j) => (
+                    <div key={j} className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (hasError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Cronograma</h2>
+        </div>
+        <ErrorMessage error={error} onRetry={refetchAll} />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header com filtros */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Cronograma</h2>
-          <p className="text-gray-600">Visualização das atividades por funcionário e horário</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Cronograma</h2>
+          <p className="text-gray-600 dark:text-gray-400">Visualização das atividades por funcionário e horário</p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
@@ -204,7 +267,7 @@ function Cronograma() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os funcionários</SelectItem>
-              {agendaData.funcionarios.map(funcionario => (
+              {funcionarios?.map(funcionario => (
                 <SelectItem key={funcionario.id} value={funcionario.id}>
                   {funcionario.nome}
                 </SelectItem>

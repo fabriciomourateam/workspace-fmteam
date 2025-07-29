@@ -9,23 +9,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Plus, Edit, Trash2, Save, X, Settings, Users, Calendar, FileText } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
-
-// URL da API (ajuste conforme necessário)
-const API_BASE_URL = '/api/admin'
+import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
+import { Loading } from './ui/loading'
+import { ErrorMessage } from './ui/error'
+import { useNotifications } from '../contexts/NotificationContext'
 
 function Admin() {
-  const [dados, setDados] = useState({
-    funcionarios: [],
-    tarefas: [],
-    agenda: [],
-    processos: {}
-  })
-  const [loading, setLoading] = useState(true)
   const [modalAberto, setModalAberto] = useState(false)
   const [tipoModal, setTipoModal] = useState('') // 'funcionario', 'tarefa', 'agendamento'
   const [itemEditando, setItemEditando] = useState(null)
-  const { toast } = useToast()
+  const { addNotification } = useNotifications()
+
+  // Carrega dados da API
+  const { data: funcionarios, loading: loadingFuncionarios, error: errorFuncionarios, refetch: refetchFuncionarios } = useFuncionarios()
+  const { data: tarefas, loading: loadingTarefas, error: errorTarefas, refetch: refetchTarefas } = useTarefas()
+  const { data: agenda, loading: loadingAgenda, error: errorAgenda, refetch: refetchAgenda } = useAgenda()
+
+  // Estados de loading e error
+  const isLoading = loadingFuncionarios || loadingTarefas || loadingAgenda
+  const hasError = errorFuncionarios || errorTarefas || errorAgenda
+  const error = errorFuncionarios || errorTarefas || errorAgenda
+
+  // Função para recarregar todos os dados
+  const refetchAll = () => {
+    refetchFuncionarios()
+    refetchTarefas()
+    refetchAgenda()
+  }
 
   // Carrega dados iniciais
   useEffect(() => {
@@ -722,7 +732,7 @@ function Admin() {
     )
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">

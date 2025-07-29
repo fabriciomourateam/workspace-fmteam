@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .loading { background: #fff3cd; border-color: #ffeaa7; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug API Connection</h1>
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        async function testUrl(name, url) {
+            const div = document.createElement('div');
+            div.className = 'test loading';
+            div.innerHTML = `<h3>${name}</h3><p>🔄 Testando ${url}...</p>`;
+            results.appendChild(div);
+            
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                
+                let isJson = false;
+                let data = text;
+                try {
+                    data = JSON.parse(text);
+                    isJson = true;
+                } catch (e) {
+                    // Não é JSON
+                }
+                
+                div.className = 'test ' + (response.ok && isJson ? 'success' : 'error');
+                div.innerHTML = `
+                    <h3>${name}</h3>
+                    <p><strong>URL:</strong> ${url}</p>
+                    <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                    <p><strong>Content-Type:</strong> ${response.headers.get('content-type')}</p>
+                    <p><strong>É JSON:</strong> ${isJson ? '✅ Sim' : '❌ Não'}</p>
+                    <details>
+                        <summary>Resposta (clique para ver)</summary>
+                        <pre style="background: #f8f9fa; padding: 10px; border-radius: 3px; overflow: auto; max-height: 200px;">${
+                            isJson ? JSON.stringify(data, null, 2) : text.substring(0, 500) + (text.length > 500 ? '...' : '')
+                        }</pre>
+                    </details>
+                `;
+            } catch (error) {
+                div.className = 'test error';
+                div.innerHTML = `
+                    <h3>${name}</h3>
+                    <p><strong>URL:</strong> ${url}</p>
+                    <p><strong>Erro:</strong> ${error.message}</p>
+                `;
+            }
+        }
+        
+        // Testa várias URLs
+        const tests = [
+            ['Backend Root', 'http://localhost:5000/'],
+            ['Health Check', 'http://localhost:5000/health'],
+            ['API Health', 'http://localhost:5000/api/health'],
+            ['Test Route', 'http://localhost:5000/test'],
+            ['Funcionários', 'http://localhost:5000/api/funcionarios'],
+        ];
+        
+        tests.forEach(([name, url]) => testUrl(name, url));
+    </script>
+</body>
+</html>

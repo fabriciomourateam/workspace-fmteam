@@ -10,14 +10,15 @@ import { NotificationProvider } from './contexts/NotificationContext'
 import ThemeToggle from './components/ThemeToggle'
 import NotificationContainer from './components/NotificationContainer'
 import GlobalSearch from './components/GlobalSearch'
-import Dashboard from './components/Dashboard'
+import Dashboard from './components/DashboardNew'
 import Cronograma from './components/Cronograma'
 import Processos from './components/Processos'
 import Relatorios from './components/Relatorios'
-import Admin from './components/Admin'
+import Admin from './components/AdminFixed'
 import Calendario from './components/Calendario'
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts'
-import agendaData from './data/agenda.json'
+import { useFuncionarios, useAgenda } from './hooks/useApi'
+import { ApiStatus } from './components/ApiStatus'
 import './App.css'
 import './styles/animations.css'
 
@@ -25,6 +26,10 @@ function Navigation() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
+  
+  // Carrega dados da API para os badges
+  const { data: funcionarios } = useFuncionarios()
+  const { data: agenda } = useAgenda()
   
   const navItems = [
     { path: '/', icon: BarChart3, label: 'Dashboard', shortcut: '1' },
@@ -113,14 +118,16 @@ function Navigation() {
               variant="outline" 
               className="text-green-600 dark:text-green-400 border-green-600 dark:border-green-400 bg-green-50 dark:bg-green-900/20 hover-lift transition-all duration-200 font-medium"
             >
-              {agendaData.funcionarios.length} Funcionários
+              {funcionarios?.length || 0} Funcionários
             </Badge>
             <Badge 
               variant="outline" 
               className="text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 hover-lift transition-all duration-200 font-medium"
             >
-              {agendaData.agenda.length} Tarefas Agendadas
+              {agenda?.length || 0} Tarefas Agendadas
             </Badge>
+            
+            <ApiStatus />
             
             <div className="animate-fadeIn" style={{ animationDelay: '0.4s' }}>
               <ThemeToggle />

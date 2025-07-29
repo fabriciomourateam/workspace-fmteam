@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Conexão com a API</h1>
+    
+    <div id="status" class="status loading">🔄 Testando conexão...</div>
+    
+    <h2>📊 Resultados:</h2>
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        const resultsDiv = document.getElementById('results');
+        const statusDiv = document.getElementById('status');
+
+        async function testEndpoint(name, url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                
+                resultsDiv.innerHTML += `
+                    <h3>✅ ${name}</h3>
+                    <p><strong>URL:</strong> ${url}</p>
+                    <p><strong>Status:</strong> ${response.status} OK</p>
+                    <p><strong>Dados:</strong> ${Array.isArray(data) ? data.length + ' itens' : 'Objeto'}</p>
+                    <details>
+                        <summary>Ver dados (clique para expandir)</summary>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </details>
+                    <hr>
+                `;
+                return true;
+            } catch (error) {
+                resultsDiv.innerHTML += `
+                    <h3>❌ ${name}</h3>
+                    <p><strong>URL:</strong> ${url}</p>
+                    <p><strong>Erro:</strong> ${error.message}</p>
+                    <hr>
+                `;
+                return false;
+            }
+        }
+
+        async function runTests() {
+            const tests = [
+                ['Health Check', `${API_BASE}/health`],
+                ['Funcionários', `${API_BASE}/funcionarios`],
+                ['Tarefas', `${API_BASE}/tarefas`],
+                ['Agenda', `${API_BASE}/agenda`],
+                ['Funcionário Específico', `${API_BASE}/funcionarios/guido`],
+                ['Agenda de Funcionário', `${API_BASE}/agenda/funcionario/guido`]
+            ];
+
+            let successCount = 0;
+            
+            for (const [name, url] of tests) {
+                const success = await testEndpoint(name, url);
+                if (success) successCount++;
+            }
+
+            if (successCount === tests.length) {
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = `🎉 Todos os testes passaram! (${successCount}/${tests.length})`;
+            } else {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = `⚠️ Alguns testes falharam (${successCount}/${tests.length})`;
+            }
+        }
+
+        // Executa os testes
+        runTests();
+    </script>
+</body>
+</html>
