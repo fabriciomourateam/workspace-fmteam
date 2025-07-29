@@ -2,15 +2,15 @@
   "version": 2,
   "builds": [
     {
+      "src": "backend/minimal_api.py",
+      "use": "@vercel/python"
+    },
+    {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist"
+        "distDir": "frontend/dist"
       }
-    },
-    {
-      "src": "backend/minimal_api.py",
-      "use": "@vercel/python"
     }
   ],
   "routes": [
@@ -22,6 +22,5 @@
       "src": "/(.*)",
       "dest": "frontend/dist/$1"
     }
-  ],
-  "outputDirectory": "frontend/dist"
+  ]
 }
