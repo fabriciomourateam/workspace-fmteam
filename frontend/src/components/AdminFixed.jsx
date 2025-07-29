@@ -8,10 +8,19 @@ import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
 import { useNotifications } from '../contexts/NotificationContext'
+import FuncionarioForm from './forms/FuncionarioForm'
+import TarefaForm from './forms/TarefaForm'
+import supabaseService from '../services/supabase'
 
 function Admin() {
   const [activeTab, setActiveTab] = useState('funcionarios')
-  const { addNotification } = useNotifications()
+  const { showSuccess, showError } = useNotifications()
+  
+  // Estados para modais
+  const [funcionarioFormOpen, setFuncionarioFormOpen] = useState(false)
+  const [tarefaFormOpen, setTarefaFormOpen] = useState(false)
+  const [editingFuncionario, setEditingFuncionario] = useState(null)
+  const [editingTarefa, setEditingTarefa] = useState(null)
 
   // Carrega dados da API
   const { data: funcionarios, loading: loadingFuncionarios, error: errorFuncionarios, refetch: refetchFuncionarios } = useFuncionarios()
@@ -28,6 +37,78 @@ function Admin() {
     refetchFuncionarios()
     refetchTarefas()
     refetchAgenda()
+  }
+
+  // Handlers para Funcionários
+  const handleCreateFuncionario = () => {
+    setEditingFuncionario(null)
+    setFuncionarioFormOpen(true)
+  }
+
+  const handleEditFuncionario = (funcionario) => {
+    setEditingFuncionario(funcionario)
+    setFuncionarioFormOpen(true)
+  }
+
+  const handleSaveFuncionario = async (funcionarioData) => {
+    try {
+      if (editingFuncionario) {
+        await supabaseService.updateFuncionario(editingFuncionario.id, funcionarioData)
+      } else {
+        await supabaseService.createFuncionario(funcionarioData)
+      }
+      refetchFuncionarios()
+    } catch (error) {
+      throw new Error(error.message)
+    }
+  }
+
+  const handleDeleteFuncionario = async (funcionario) => {
+    if (window.confirm(`Tem certeza que deseja deletar ${funcionario.nome}?`)) {
+      try {
+        await supabaseService.deleteFuncionario(funcionario.id)
+        showSuccess('Funcionário deletado com sucesso!')
+        refetchFuncionarios()
+      } catch (error) {
+        showError('Erro ao deletar funcionário: ' + error.message)
+      }
+    }
+  }
+
+  // Handlers para Tarefas
+  const handleCreateTarefa = () => {
+    setEditingTarefa(null)
+    setTarefaFormOpen(true)
+  }
+
+  const handleEditTarefa = (tarefa) => {
+    setEditingTarefa(tarefa)
+    setTarefaFormOpen(true)
+  }
+
+  const handleSaveTarefa = async (tarefaData) => {
+    try {
+      if (editingTarefa) {
+        await supabaseService.updateTarefa(editingTarefa.id, tarefaData)
+      } else {
+        await supabaseService.createTarefa(tarefaData)
+      }
+      refetchTarefas()
+    } catch (error) {
+      throw new Error(error.message)
+    }
+  }
+
+  const handleDeleteTarefa = async (tarefa) => {
+    if (window.confirm(`Tem certeza que deseja deletar ${tarefa.nome}?`)) {
+      try {
+        await supabaseService.deleteTarefa(tarefa.id)
+        showSuccess('Tarefa deletada com sucesso!')
+        refetchTarefas()
+      } catch (error) {
+        showError('Erro ao deletar tarefa: ' + error.message)
+      }
+    }
   }
 
   // Loading state
@@ -116,7 +197,7 @@ function Admin() {
         <TabsContent value="funcionarios" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Funcionários</h3>
-            <Button>
+            <Button onClick={handleCreateFuncionario}>
               <Plus className="w-4 h-4 mr-2" />
               Adicionar Funcionário
             </Button>
@@ -277,6 +358,21 @@ function Admin() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modais */}
+      <FuncionarioForm
+        isOpen={funcionarioFormOpen}
+        onClose={() => setFuncionarioFormOpen(false)}
+        funcionario={editingFuncionario}
+        onSave={handleSaveFuncionario}
+      />
+
+      <TarefaForm
+        isOpen={tarefaFormOpen}
+        onClose={() => setTarefaFormOpen(false)}
+        tarefa={editingTarefa}
+        onSave={handleSaveTarefa}
+      />
     </div>
   )
 }

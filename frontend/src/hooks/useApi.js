@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import apiService from '../services/api';
+import dataService from '../services/dataService';
+import supabaseService from '../services/supabase';
 
 /**
  * Hook personalizado para fazer chamadas à API com loading e error states
@@ -61,21 +62,21 @@ export function useApi(apiCall, dependencies = []) {
  * Hooks específicos para cada endpoint
  */
 export function useFuncionarios() {
-  return useApi(() => apiService.getFuncionarios());
+  return useApi(() => dataService.getFuncionarios());
 }
 
 export function useTarefas() {
-  return useApi(() => apiService.getTarefas());
+  return useApi(() => dataService.getTarefas());
 }
 
 export function useAgenda() {
-  return useApi(() => apiService.getAgenda());
+  return useApi(() => dataService.getAgenda());
 }
 
 export function useFuncionario(id) {
-  return useApi(() => apiService.getFuncionario(id), [id]);
+  return useApi(() => dataService.getFuncionario(id), [id]);
 }
 
 export function useAgendaFuncionario(funcionarioId) {
-  return useApi(() => apiService.getAgendaFuncionario(funcionarioId), [funcionarioId]);
+  return useApi(() => dataService.getAgendaFuncionario(funcionarioId), [funcionarioId]);
 }
