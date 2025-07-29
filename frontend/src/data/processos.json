@@ -1,0 +1,352 @@
+{
+  "checkins": {
+    "titulo": "Check-ins com Alunos",
+    "descricao": "Processo de acompanhamento individual dos alunos para verificar progresso e necessidades",
+    "tempoEstimado": "30 minutos",
+    "frequencia": "Diária",
+    "passos": [
+      {
+        "numero": 1,
+        "titulo": "Preparação",
+        "descricao": "Revisar histórico do aluno e últimas interações",
+        "tempo": "5 min",
+        "recursos": ["CRM", "Histórico de conversas"]
+      },
+      {
+        "numero": 2,
+        "titulo": "Contato Inicial",
+        "descricao": "Entrar em contato via WhatsApp ou plataforma preferida",
+        "tempo": "2 min",
+        "recursos": ["WhatsApp", "Telegram", "Discord"]
+      },
+      {
+        "numero": 3,
+        "titulo": "Verificação de Progresso",
+        "descricao": "Perguntar sobre o andamento dos estudos e dificuldades",
+        "tempo": "10 min",
+        "recursos": ["Roteiro de perguntas", "Checklist de progresso"]
+      },
+      {
+        "numero": 4,
+        "titulo": "Suporte e Orientação",
+        "descricao": "Oferecer ajuda específica e orientações personalizadas",
+        "tempo": "10 min",
+        "recursos": ["Material de apoio", "Links úteis"]
+      },
+      {
+        "numero": 5,
+        "titulo": "Registro",
+        "descricao": "Documentar a conversa e próximos passos no sistema",
+        "tempo": "3 min",
+        "recursos": ["CRM", "Planilha de acompanhamento"]
+      }
+    ],
+    "observacoes": [
+      "Sempre manter tom amigável e motivacional",
+      "Personalizar a abordagem para cada aluno",
+      "Registrar todas as interações para histórico"
+    ]
+  },
+  "reuniao_diaria": {
+    "titulo": "Reunião Diária da Equipe",
+    "descricao": "Alinhamento matinal da equipe para planejamento e sincronização das atividades",
+    "tempoEstimado": "30 minutos",
+    "frequencia": "Diária",
+    "passos": [
+      {
+        "numero": 1,
+        "titulo": "Abertura",
+        "descricao": "Bom dia da equipe e verificação de presença",
+        "tempo": "2 min",
+        "recursos": ["Zoom", "Google Meet", "Presencial"]
+      },
+      {
+        "numero": 2,
+        "titulo": "Revisão do Dia Anterior",
+        "descricao": "Cada membro compartilha resultados do dia anterior",
+        "tempo": "10 min",
+        "recursos": ["Dashboard de métricas", "Relatórios"]
+      },
+      {
+        "numero": 3,
+        "titulo": "Planejamento do Dia",
+        "descricao": "Definir prioridades e distribuir tarefas do dia",
+        "tempo": "12 min",
+        "recursos": ["Agenda compartilhada", "Lista de tarefas"]
+      },
+      {
+        "numero": 4,
+        "titulo": "Discussão de Bloqueios",
+        "descricao": "Identificar e resolver impedimentos da equipe",
+        "tempo": "5 min",
+        "recursos": ["Lista de impedimentos"]
+      },
+      {
+        "numero": 5,
+        "titulo": "Encerramento",
+        "descricao": "Resumo dos próximos passos e motivação da equipe",
+        "tempo": "1 min",
+        "recursos": []
+      }
+    ],
+    "observacoes": [
+      "Manter foco e objetividade",
+      "Todos devem participar ativamente",
+      "Registrar decisões importantes"
+    ]
+  },
+  "suporte": {
+    "titulo": "Atendimento ao Cliente",
+    "descricao": "Processo de suporte técnico e comercial aos clientes",
+    "tempoEstimado": "60 minutos",
+    "frequencia": "Contínua",
+    "passos": [
+      {
+        "numero": 1,
+        "titulo": "Recebimento da Solicitação",
+        "descricao": "Identificar e categorizar a demanda do cliente",
+        "tempo": "3 min",
+        "recursos": ["Sistema de tickets", "WhatsApp", "Email"]
+      },
+      {
+        "numero": 2,
+        "titulo": "Análise do Problema",
+        "descricao": "Entender completamente a situação do cliente",
+        "tempo": "10 min",
+        "recursos": ["Base de conhecimento", "Histórico do cliente"]
+      },
+      {
+        "numero": 3,
+        "titulo": "Busca por Solução",
+        "descricao": "Pesquisar solução na base de conhecimento ou escalar",
+        "tempo": "15 min",
+        "recursos": ["FAQ", "Documentação", "Equipe técnica"]
+      },
+      {
+        "numero": 4,
+        "titulo": "Implementação da Solução",
+        "descricao": "Aplicar a solução e orientar o cliente",
+        "tempo": "20 min",
+        "recursos": ["Acesso remoto", "Tutoriais", "Vídeos"]
+      },
+      {
+        "numero": 5,
+        "titulo": "Confirmação e Follow-up",
+        "descricao": "Verificar se o problema foi resolvido satisfatoriamente",
+        "tempo": "7 min",
+        "recursos": ["Pesquisa de satisfação"]
+      },
+      {
+        "numero": 6,
+        "titulo": "Documentação",
+        "descricao": "Registrar a solução para futuros casos similares",
+        "tempo": "5 min",
+        "recursos": ["Base de conhecimento", "Sistema de tickets"]
+      }
+    ],
+    "observacoes": [
+      "Sempre priorizar a experiência do cliente",
+      "Documentar soluções para casos futuros",
+      "Escalar quando necessário"
+    ]
+  },
+  "social_selling": {
+    "titulo": "Social Selling no Instagram",
+    "descricao": "Estratégia de vendas através do Instagram para atrair e converter leads",
+    "tempoEstimado": "45 minutos",
+    "frequencia": "Diária",
+    "passos": [
+      {
+        "numero": 1,
+        "titulo": "Planejamento de Conteúdo",
+        "descricao": "Definir posts e stories do dia baseado no calendário editorial",
+        "tempo": "10 min",
+        "recursos": ["Calendário editorial", "Banco de imagens", "Canva"]
+      },
+      {
+        "numero": 2,
+        "titulo": "Criação de Posts",
+        "descricao": "Produzir conteúdo visual e textual para o feed",
+        "tempo": "15 min",
+        "recursos": ["Canva", "Photoshop", "Banco de imagens"]
+      },
+      {
+        "numero": 3,
+        "titulo": "Publicação e Stories",
+        "descricao": "Publicar conteúdo no feed e stories com hashtags estratégicas",
+        "tempo": "10 min",
+        "recursos": ["Instagram", "Hashtags research", "Agendador"]
+      },
+      {
+        "numero": 4,
+        "titulo": "Engajamento Ativo",
+        "descricao": "Responder comentários, DMs e interagir com seguidores",
+        "tempo": "10 min",
+        "recursos": ["Instagram", "Templates de resposta"]
+      }
+    ],
+    "observacoes": [
+      "Manter consistência visual da marca",
+      "Responder rapidamente às interações",
+      "Acompanhar métricas de engajamento"
+    ]
+  },
+  "engajamento_grupo": {
+    "titulo": "Engajamento em Grupos de Alunos",
+    "descricao": "Ativação e motivação dos alunos através de grupos no WhatsApp/Telegram",
+    "tempoEstimado": "30 minutos",
+    "frequencia": "Diária",
+    "passos": [
+      {
+        "numero": 1,
+        "titulo": "Análise dos Grupos",
+        "descricao": "Verificar atividade e engajamento nos grupos de alunos",
+        "tempo": "5 min",
+        "recursos": ["WhatsApp", "Telegram", "Discord"]
+      },
+      {
+        "numero": 2,
+        "titulo": "Preparação de Conteúdo",
+        "descricao": "Selecionar mensagens motivacionais e conteúdo relevante",
+        "tempo": "10 min",
+        "recursos": ["Banco de mensagens", "Conteúdo educativo"]
+      },
+      {
+        "numero": 3,
+        "titulo": "Envio de Mensagens",
+        "descricao": "Postar conteúdo nos grupos de forma estratégica",
+        "tempo": "10 min",
+        "recursos": ["Agendador de mensagens", "Templates"]
+      },
+      {
+        "numero": 4,
+        "titulo": "Moderação e Resposta",
+        "descricao": "Moderar discussões e responder dúvidas dos alunos",
+        "tempo": "5 min",
+        "recursos": ["Regras do grupo", "FAQ"]
+      }
+    ],
+    "observacoes": [
+      "Manter ambiente positivo e motivacional",
+      "Evitar spam excessivo",
+      "Incentivar participação dos alunos"
+    ]
+  },
+  "separar_alunos": {
+    "titulo": "Segmentação de Alunos",
+    "descricao": "Processo de categorização de alunos para ações de engajamento específicas",
+    "tempoEstimado": "45 minutos",
+    "frequencia": "Diária",
+    "passos": [
+      {
+        "numero": 1,
+        "titulo": "Análise de Dados",
+        "descricao": "Revisar métricas de engajamento e progresso dos alunos",
+        "tempo": "15 min",
+        "recursos": ["Dashboard de alunos", "Relatórios de atividade"]
+      },
+      {
+        "numero": 2,
+        "titulo": "Categorização",
+        "descricao": "Classificar alunos em grupos: ativos, inativos, em risco",
+        "tempo": "20 min",
+        "recursos": ["Planilha de segmentação", "Critérios de classificação"]
+      },
+      {
+        "numero": 3,
+        "titulo": "Definição de Ações",
+        "descricao": "Determinar estratégias específicas para cada segmento",
+        "tempo": "10 min",
+        "recursos": ["Playbook de engajamento", "Templates de ação"]
+      }
+    ],
+    "observacoes": [
+      "Usar critérios objetivos para segmentação",
+      "Atualizar regularmente as categorias",
+      "Personalizar abordagem por segmento"
+    ]
+  },
+  "material_renovacao": {
+    "titulo": "Criação de Material para Renovação",
+    "descricao": "Desenvolvimento de conteúdo específico para retenção e renovação de alunos",
+    "tempoEstimado": "90 minutos",
+    "frequencia": "Diária",
+    "passos": [
+      {
+        "numero": 1,
+        "titulo": "Análise de Necessidades",
+        "descricao": "Identificar demandas específicas dos alunos em renovação",
+        "tempo": "20 min",
+        "recursos": ["Feedback dos alunos", "Pesquisas de satisfação"]
+      },
+      {
+        "numero": 2,
+        "titulo": "Planejamento do Conteúdo",
+        "descricao": "Estruturar o material baseado nas necessidades identificadas",
+        "tempo": "15 min",
+        "recursos": ["Template de planejamento", "Objetivos de aprendizagem"]
+      },
+      {
+        "numero": 3,
+        "titulo": "Criação do Material",
+        "descricao": "Produzir conteúdo educativo e motivacional",
+        "tempo": "45 min",
+        "recursos": ["Canva", "PowerPoint", "Gravador de tela"]
+      },
+      {
+        "numero": 4,
+        "titulo": "Revisão e Ajustes",
+        "descricao": "Revisar qualidade e adequação do material criado",
+        "tempo": "10 min",
+        "recursos": ["Checklist de qualidade"]
+      }
+    ],
+    "observacoes": [
+      "Focar em valor agregado para o aluno",
+      "Manter qualidade visual e didática",
+      "Testar material antes da distribuição"
+    ]
+  },
+  "montar_planos": {
+    "titulo": "Desenvolvimento de Novos Planos",
+    "descricao": "Criação e estruturação de novos produtos e serviços",
+    "tempoEstimado": "60 minutos",
+    "frequencia": "Conforme demanda",
+    "passos": [
+      {
+        "numero": 1,
+        "titulo": "Pesquisa de Mercado",
+        "descricao": "Analisar demandas do mercado e concorrência",
+        "tempo": "20 min",
+        "recursos": ["Google Trends", "Pesquisas de mercado", "Feedback de clientes"]
+      },
+      {
+        "numero": 2,
+        "titulo": "Estruturação do Plano",
+        "descricao": "Definir escopo, objetivos e metodologia do novo plano",
+        "tempo": "25 min",
+        "recursos": ["Template de plano", "Metodologias existentes"]
+      },
+      {
+        "numero": 3,
+        "titulo": "Precificação",
+        "descricao": "Calcular custos e definir preço competitivo",
+        "tempo": "10 min",
+        "recursos": ["Planilha de custos", "Análise de concorrência"]
+      },
+      {
+        "numero": 4,
+        "titulo": "Documentação",
+        "descricao": "Criar documentação completa do novo plano",
+        "tempo": "5 min",
+        "recursos": ["Template de documentação"]
+      }
+    ],
+    "observacoes": [
+      "Validar com potenciais clientes",
+      "Considerar recursos disponíveis",
+      "Alinhar com estratégia da empresa"
+    ]
+  }
+}
+
