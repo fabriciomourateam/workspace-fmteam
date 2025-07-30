@@ -21,15 +21,15 @@ const STATIC_DATA = {
   tarefas: [
     {"id": "checkins", "nome": "Check-ins", "categoria": "gestao", "tempo_estimado": 30, "descricao": "Acompanhamento individual dos alunos", "prioridade": "alta"},
     {"id": "reuniao_diaria", "nome": "Reunião diária", "categoria": "gestao", "tempo_estimado": 30, "descricao": "Alinhamento da equipe e planejamento do dia", "prioridade": "alta"},
-    {"id": "suporte", "nome": "Suporte", "categoria": "atendimento", "tempo_estimado": 60, "descricao": "Atendimento aos clientes e resolução de dúvidas", "prioridade": "alta"},
-    {"id": "social_selling", "nome": "Social Selling Insta", "categoria": "marketing", "tempo_estimado": 45, "descricao": "Atividades de marketing no Instagram", "prioridade": "media"},
+    {"id": "suporte", "nome": "Suporte", "categoria": "atendimento", "tempo_estimado": 30, "descricao": "Atendimento aos clientes e resolução de dúvidas", "prioridade": "alta"},
+    {"id": "social_selling", "nome": "Social Selling Insta", "categoria": "marketing", "tempo_estimado": 30, "descricao": "Atividades de marketing no Instagram", "prioridade": "media"},
     {"id": "engajamento_grupo", "nome": "Enviar mensagens de engajamento no grupo", "categoria": "engajamento", "tempo_estimado": 30, "descricao": "Comunicação ativa com grupos de alunos", "prioridade": "alta"},
-    {"id": "separar_alunos", "nome": "Separar alunos para engajamento", "categoria": "engajamento", "tempo_estimado": 45, "descricao": "Segmentação de alunos para ações específicas", "prioridade": "media"},
-    {"id": "material_renovacao", "nome": "Elaborar material para alunos de renovação", "categoria": "conteudo", "tempo_estimado": 90, "descricao": "Criação de conteúdo para retenção de clientes", "prioridade": "alta"},
-    {"id": "montar_planos", "nome": "Montar planos novos", "categoria": "produto", "tempo_estimado": 60, "descricao": "Desenvolvimento de novos produtos e serviços", "prioridade": "media"},
-    {"id": "engajamento_alunos", "nome": "Engajamento dos alunos", "categoria": "engajamento", "tempo_estimado": 45, "descricao": "Ativação e motivação dos alunos", "prioridade": "alta"},
-    {"id": "conteudo_desengajados", "nome": "Produção de conteúdo para alunos desengajados", "categoria": "conteudo", "tempo_estimado": 60, "descricao": "Material específico para reativação de alunos", "prioridade": "media"},
-    {"id": "engajamento_time", "nome": "Engajamento no grupo do Time", "categoria": "interno", "tempo_estimado": 15, "descricao": "Comunicação e motivação da equipe interna", "prioridade": "baixa"}
+    {"id": "separar_alunos", "nome": "Separar alunos para engajamento", "categoria": "engajamento", "tempo_estimado": 30, "descricao": "Segmentação de alunos para ações específicas", "prioridade": "media"},
+    {"id": "material_renovacao", "nome": "Elaborar material para alunos de renovação", "categoria": "conteudo", "tempo_estimado": 30, "descricao": "Criação de conteúdo para retenção de clientes", "prioridade": "alta"},
+    {"id": "montar_planos", "nome": "Montar planos novos", "categoria": "produto", "tempo_estimado": 30, "descricao": "Desenvolvimento de novos produtos e serviços", "prioridade": "media"},
+    {"id": "engajamento_alunos", "nome": "Engajamento dos alunos", "categoria": "engajamento", "tempo_estimado": 30, "descricao": "Ativação e motivação dos alunos", "prioridade": "alta"},
+    {"id": "conteudo_desengajados", "nome": "Produção de conteúdo para alunos desengajados", "categoria": "conteudo", "tempo_estimado": 30, "descricao": "Material específico para reativação de alunos", "prioridade": "media"},
+    {"id": "engajamento_time", "nome": "Engajamento no grupo do Time", "categoria": "interno", "tempo_estimado": 30, "descricao": "Comunicação e motivação da equipe interna", "prioridade": "baixa"}
   ],
   agenda: [
     {"horario": "08:00", "funcionario": "jean", "tarefa": "suporte"},

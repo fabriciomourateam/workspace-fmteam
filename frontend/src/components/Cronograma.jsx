@@ -7,6 +7,9 @@ import { Clock, User, Filter, Calendar } from 'lucide-react'
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
+// import { useNotifications } from '../contexts/NotificationContext'
+import AgendamentoForm from './forms/AgendamentoForm'
+import supabaseService from '../services/supabase'
 
 const categoriasCores = {
   'gestao': 'bg-blue-500',
@@ -21,6 +24,9 @@ const categoriasCores = {
 function Cronograma() {
   const [funcionarioSelecionado, setFuncionarioSelecionado] = useState('todos')
   const [visualizacao, setVisualizacao] = useState('timeline') // timeline ou grade
+  // const { showSuccess, showError } = useNotifications()
+  const showSuccess = (message) => alert('Sucesso: ' + message)
+  const showError = (message) => alert('Erro: ' + message)
 
   // Carrega dados da API
   const { data: funcionarios, loading: loadingFuncionarios, error: errorFuncionarios, refetch: refetchFuncionarios } = useFuncionarios()
@@ -32,11 +38,60 @@ function Cronograma() {
   const hasError = errorFuncionarios || errorTarefas || errorAgenda
   const error = errorFuncionarios || errorTarefas || errorAgenda
 
+  // Estados para agendamentos
+  const [agendamentoFormOpen, setAgendamentoFormOpen] = useState(false)
+  const [editingAgendamento, setEditingAgendamento] = useState(null)
+  const [novoAgendamento, setNovoAgendamento] = useState({ horario: '', funcionario_id: '' })
+
   // Função para recarregar todos os dados
   const refetchAll = () => {
     refetchFuncionarios()
     refetchTarefas()
     refetchAgenda()
+  }
+
+  // Handlers para agendamentos
+  const handleAddAgendamento = (horario, funcionarioId) => {
+    setNovoAgendamento({ horario, funcionario_id: funcionarioId })
+    setEditingAgendamento(null)
+    setAgendamentoFormOpen(true)
+  }
+
+  const handleEditAgendamento = (agendamento) => {
+    console.log('Editando agendamento:', agendamento)
+    // Transformar dados para o formato esperado pelo formulário
+    const agendamentoFormatado = {
+      ...agendamento,
+      funcionario_id: agendamento.funcionario || agendamento.funcionario_id,
+      tarefa_id: agendamento.tarefa || agendamento.tarefa_id
+    }
+    setEditingAgendamento(agendamentoFormatado)
+    setAgendamentoFormOpen(true)
+  }
+
+  const handleSaveAgendamento = async (agendamentoData) => {
+    try {
+      if (editingAgendamento) {
+        await supabaseService.updateAgendamento(editingAgendamento.id, agendamentoData)
+      } else {
+        await supabaseService.createAgendamento(agendamentoData)
+      }
+      refetchAgenda()
+    } catch (error) {
+      throw new Error(error.message)
+    }
+  }
+
+  const handleDeleteAgendamento = async (agendamento) => {
+    if (window.confirm('Tem certeza que deseja deletar este agendamento?')) {
+      try {
+        await supabaseService.deleteAgendamento(agendamento.id)
+        showSuccess('Agendamento deletado com sucesso!')
+        refetchAgenda()
+      } catch (error) {
+        showError('Erro ao deletar agendamento: ' + error.message)
+      }
+    }
   }
 
   // Horários únicos ordenados
@@ -85,11 +140,15 @@ function Cronograma() {
     return resultado
   }, [funcionarios, tarefas, dadosFiltrados, horarios])
 
-  const TarefaCard = ({ tarefa, horario }) => {
+  const TarefaCard = ({ tarefa, horario, funcionarioId }) => {
     if (!tarefa) {
       return (
-        <div className="h-16 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-          <span className="text-gray-400 text-sm">Livre</span>
+        <div 
+          className="h-16 bg-gray-100 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors group"
+          onClick={() => handleAddAgendamento(horario, funcionarioId)}
+          title="Clique para adicionar tarefa"
+        >
+          <span className="text-gray-400 text-sm group-hover:text-gray-600">+ Adicionar</span>
         </div>
       )
     }
@@ -98,13 +157,28 @@ function Cronograma() {
     const corCategoria = categoriasCores[categoria] || 'bg-gray-500'
 
     return (
-      <div className={`h-16 ${corCategoria} rounded-lg p-3 text-white shadow-sm hover:shadow-md transition-shadow cursor-pointer`}>
+      <div 
+        className={`h-16 ${corCategoria} rounded-lg p-3 text-white shadow-sm hover:shadow-md transition-shadow cursor-pointer group relative`}
+        onClick={() => handleEditAgendamento(tarefa)}
+      >
         <div className="text-sm font-medium truncate">
           {tarefa.tarefaInfo?.nome || tarefa.tarefa}
         </div>
         <div className="text-xs opacity-90">
-          {tarefa.tarefaInfo?.tempoEstimado || 30} min
+          30 min
         </div>
+        
+        {/* Botão de deletar */}
+        <button
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-opacity"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleDeleteAgendamento(tarefa)
+          }}
+          title="Deletar agendamento"
+        >
+          ×
+        </button>
       </div>
     )
   }
@@ -122,9 +196,9 @@ function Cronograma() {
                 />
                 <CardTitle className="text-lg">{funcionario.nome}</CardTitle>
                 <Badge variant="outline">
-                  {funcionario.horarioInicio === 'flexible' 
+                  {funcionario.horario_inicio === 'flexible' 
                     ? 'Horário Flexível' 
-                    : `${funcionario.horarioInicio} - ${funcionario.horarioFim}`
+                    : `${funcionario.horario_inicio || 'N/A'} - ${funcionario.horario_fim || 'N/A'}`
                   }
                 </Badge>
               </div>
@@ -143,6 +217,7 @@ function Cronograma() {
                   <TarefaCard 
                     tarefa={funcionario.tarefas[horario]} 
                     horario={horario}
+                    funcionarioId={funcionario.id}
                   />
                 </div>
               ))}
@@ -267,7 +342,7 @@ function Cronograma() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os funcionários</SelectItem>
-              {funcionarios?.map(funcionario => (
+              {funcionarios?.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => (
                 <SelectItem key={funcionario.id} value={funcionario.id}>
                   {funcionario.nome}
                 </SelectItem>
@@ -307,6 +382,18 @@ function Cronograma() {
 
       {/* Visualização */}
       {visualizacao === 'timeline' ? <TimelineView /> : <GridView />}
+
+      {/* Modal de Agendamento */}
+      <AgendamentoForm
+        isOpen={agendamentoFormOpen}
+        onClose={() => setAgendamentoFormOpen(false)}
+        agendamento={editingAgendamento}
+        funcionarios={funcionarios || []}
+        tarefas={tarefas || []}
+        onSave={handleSaveAgendamento}
+        horarioInicial={novoAgendamento.horario}
+        funcionarioInicial={novoAgendamento.funcionario_id}
+      />
     </div>
   )
 }

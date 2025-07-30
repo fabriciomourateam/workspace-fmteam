@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { useNotifications } from '../../contexts/NotificationContext'
+// import { useNotifications } from '../../contexts/NotificationContext'
 
 const CORES_DISPONIVEIS = [
   '#2563eb', '#10b981', '#f59e0b', '#ef4444', 
@@ -16,7 +16,9 @@ export default function FuncionarioForm({
   funcionario = null, 
   onSave 
 }) {
-  const { showSuccess, showError } = useNotifications()
+  // const { showSuccess, showError } = useNotifications()
+  const showSuccess = (message) => console.log('Sucesso:', message)
+  const showError = (message) => console.error('Erro:', message)
   const [loading, setLoading] = useState(false)
   
   const [formData, setFormData] = useState({
@@ -26,6 +28,28 @@ export default function FuncionarioForm({
     horario_fim: funcionario?.horario_fim || '',
     cor: funcionario?.cor || CORES_DISPONIVEIS[0]
   })
+
+  // Atualizar formData quando funcionario mudar
+  React.useEffect(() => {
+    if (funcionario) {
+      console.log('Carregando funcionário para edição:', funcionario)
+      setFormData({
+        id: funcionario.id || '',
+        nome: funcionario.nome || '',
+        horario_inicio: funcionario.horario_inicio || '',
+        horario_fim: funcionario.horario_fim || '',
+        cor: funcionario.cor || CORES_DISPONIVEIS[0]
+      })
+    } else {
+      setFormData({
+        id: '',
+        nome: '',
+        horario_inicio: '',
+        horario_fim: '',
+        cor: CORES_DISPONIVEIS[0]
+      })
+    }
+  }, [funcionario, isOpen]) // Adicionar isOpen como dependência
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -37,8 +61,8 @@ export default function FuncionarioForm({
         throw new Error('Nome é obrigatório')
       }
       
-      if (!funcionario && !formData.id.trim()) {
-        throw new Error('ID é obrigatório')
+      if (!formData.id || !formData.id.trim()) {
+        throw new Error('ID é obrigatório e não pode estar vazio')
       }
 
       await onSave(formData)

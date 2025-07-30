@@ -149,6 +149,37 @@ class SupabaseService {
     if (error) throw error
     return data
   }
+
+  // Buscar agendamento específico
+  async getAgendamentoByHorarioFuncionario(horario, funcionarioId) {
+    const { data, error } = await supabase
+      .from('agenda')
+      .select('*')
+      .eq('horario', horario)
+      .eq('funcionario_id', funcionarioId)
+      .single()
+    
+    if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
+    return data
+  }
+
+  // Verificar conflitos de agendamento
+  async checkAgendamentoConflict(horario, funcionarioId, excludeId = null) {
+    let query = supabase
+      .from('agenda')
+      .select('id')
+      .eq('horario', horario)
+      .eq('funcionario_id', funcionarioId)
+    
+    if (excludeId) {
+      query = query.neq('id', excludeId)
+    }
+    
+    const { data, error } = await query
+    
+    if (error) throw error
+    return data && data.length > 0
+  }
 }
 
 export const supabaseService = new SupabaseService()

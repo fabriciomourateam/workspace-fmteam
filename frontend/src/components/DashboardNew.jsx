@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Users, Clock, CheckCircle, AlertCircle, TrendingUp, Filter, Activity, BarChart3 } from 'lucide-react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { useTheme } from '../contexts/ThemeContext'
+// import { useTheme } from '../contexts/ThemeContext'
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
@@ -15,7 +15,8 @@ const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'
 function Dashboard() {
   const [filtroFuncionario, setFiltroFuncionario] = useState('todos')
   const [filtroHorario, setFiltroHorario] = useState('todos')
-  const { isDark } = useTheme()
+  // const { isDark } = useTheme()
+  const isDark = false
 
   // Carrega dados da API
   const { data: funcionarios, loading: loadingFuncionarios, error: errorFuncionarios, refetch: refetchFuncionarios } = useFuncionarios()
@@ -66,20 +67,34 @@ function Dashboard() {
       }
     }
 
+    console.log('Calculando estatísticas:', { dadosFiltrados: dadosFiltrados.length, tarefas: tarefas.length })
+
     const totalTarefas = dadosFiltrados.length
-    const funcionariosAtivos = new Set(dadosFiltrados.map(item => item.funcionario)).size
+    const funcionariosAtivos = new Set(dadosFiltrados.map(item => item.funcionario || item.funcionario_id)).size
+    
     const tempoTotal = dadosFiltrados.reduce((acc, item) => {
-      const tarefa = tarefas.find(t => t.id === item.tarefa)
-      return acc + (tarefa ? tarefa.tempoEstimado : 0)
+      // Suporte para diferentes estruturas de dados (Supabase vs estático)
+      const tarefaId = item.tarefa || item.tarefa_id
+      const tarefa = tarefas.find(t => t.id === tarefaId)
+      const tempo = tarefa?.tempoEstimado || tarefa?.tempo_estimado || 0
+      
+      if (tempo === 0) {
+        console.warn(`Tarefa não encontrada ou sem tempo: ${tarefaId}`, { tarefa })
+      }
+      
+      return acc + tempo
     }, 0)
     
     const categorias = {}
     dadosFiltrados.forEach(item => {
-      const tarefa = tarefas.find(t => t.id === item.tarefa)
+      const tarefaId = item.tarefa || item.tarefa_id
+      const tarefa = tarefas.find(t => t.id === tarefaId)
       if (tarefa) {
         categorias[tarefa.categoria] = (categorias[tarefa.categoria] || 0) + 1
       }
     })
+
+    console.log('Estatísticas calculadas:', { totalTarefas, funcionariosAtivos, tempoTotal, categorias })
 
     return {
       totalTarefas,
@@ -226,9 +241,14 @@ function Dashboard() {
             <Clock className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round(estatisticas.tempoTotal / 60)}h</div>
+            <div className="text-2xl font-bold">
+              {estatisticas.tempoTotal >= 60 
+                ? `${Math.floor(estatisticas.tempoTotal / 60)}h ${estatisticas.tempoTotal % 60}m`
+                : `${estatisticas.tempoTotal}m`
+              }
+            </div>
             <p className="text-xs text-gray-600 dark:text-gray-400">
-              {estatisticas.tempoTotal} minutos
+              {estatisticas.tempoTotal} minutos totais
             </p>
           </CardContent>
         </Card>

@@ -7,20 +7,25 @@ import { Plus, Edit, Trash2, Settings, Users, Calendar, FileText } from 'lucide-
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
-import { useNotifications } from '../contexts/NotificationContext'
+// import { useNotifications } from '../contexts/NotificationContext'
 import FuncionarioForm from './forms/FuncionarioForm'
 import TarefaForm from './forms/TarefaForm'
+import AgendamentoForm from './forms/AgendamentoForm'
 import supabaseService from '../services/supabase'
 
 function Admin() {
   const [activeTab, setActiveTab] = useState('funcionarios')
-  const { showSuccess, showError } = useNotifications()
+  // const { showSuccess, showError } = useNotifications()
+  const showSuccess = (message) => alert('Sucesso: ' + message)
+  const showError = (message) => alert('Erro: ' + message)
   
   // Estados para modais
   const [funcionarioFormOpen, setFuncionarioFormOpen] = useState(false)
   const [tarefaFormOpen, setTarefaFormOpen] = useState(false)
+  const [agendamentoFormOpen, setAgendamentoFormOpen] = useState(false)
   const [editingFuncionario, setEditingFuncionario] = useState(null)
   const [editingTarefa, setEditingTarefa] = useState(null)
+  const [editingAgendamento, setEditingAgendamento] = useState(null)
 
   // Carrega dados da API
   const { data: funcionarios, loading: loadingFuncionarios, error: errorFuncionarios, refetch: refetchFuncionarios } = useFuncionarios()
@@ -46,6 +51,7 @@ function Admin() {
   }
 
   const handleEditFuncionario = (funcionario) => {
+    console.log('Editando funcionário:', funcionario)
     setEditingFuncionario(funcionario)
     setFuncionarioFormOpen(true)
   }
@@ -107,6 +113,50 @@ function Admin() {
         refetchTarefas()
       } catch (error) {
         showError('Erro ao deletar tarefa: ' + error.message)
+      }
+    }
+  }
+
+  // Handlers para Agendamentos
+  const handleCreateAgendamento = () => {
+    setEditingAgendamento(null)
+    setAgendamentoFormOpen(true)
+  }
+
+  const handleEditAgendamento = (agendamento) => {
+    console.log('Editando agendamento no Admin:', agendamento)
+    // Transformar dados para o formato esperado pelo formulário
+    const agendamentoFormatado = {
+      ...agendamento,
+      funcionario_id: agendamento.funcionario || agendamento.funcionario_id,
+      tarefa_id: agendamento.tarefa || agendamento.tarefa_id
+    }
+    console.log('Agendamento formatado:', agendamentoFormatado)
+    setEditingAgendamento(agendamentoFormatado)
+    setAgendamentoFormOpen(true)
+  }
+
+  const handleSaveAgendamento = async (agendamentoData) => {
+    try {
+      if (editingAgendamento) {
+        await supabaseService.updateAgendamento(editingAgendamento.id, agendamentoData)
+      } else {
+        await supabaseService.createAgendamento(agendamentoData)
+      }
+      refetchAgenda()
+    } catch (error) {
+      throw new Error(error.message)
+    }
+  }
+
+  const handleDeleteAgendamento = async (agendamento) => {
+    if (window.confirm('Tem certeza que deseja deletar este agendamento?')) {
+      try {
+        await supabaseService.deleteAgendamento(agendamento.id)
+        showSuccess('Agendamento deletado com sucesso!')
+        refetchAgenda()
+      } catch (error) {
+        showError('Erro ao deletar agendamento: ' + error.message)
       }
     }
   }
@@ -216,10 +266,19 @@ function Admin() {
                       <CardTitle className="text-base">{funcionario.nome}</CardTitle>
                     </div>
                     <div className="flex space-x-1">
-                      <Button size="sm" variant="ghost">
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleEditFuncionario(funcionario)}
+                      >
                         <Edit className="w-3 h-3" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteFuncionario(funcionario)}
+                      >
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
@@ -234,9 +293,9 @@ function Admin() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Horário:</span>
                       <span>
-                        {funcionario.horarioInicio === 'flexible' 
+                        {funcionario.horario_inicio === 'flexible' 
                           ? 'Flexível' 
-                          : `${funcionario.horarioInicio} - ${funcionario.horarioFim}`
+                          : `${funcionario.horario_inicio || 'N/A'} - ${funcionario.horario_fim || 'N/A'}`
                         }
                       </span>
                     </div>
@@ -251,7 +310,7 @@ function Admin() {
         <TabsContent value="tarefas" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Tarefas</h3>
-            <Button>
+            <Button onClick={handleCreateTarefa}>
               <Plus className="w-4 h-4 mr-2" />
               Adicionar Tarefa
             </Button>
@@ -264,10 +323,19 @@ function Admin() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{tarefa.nome}</CardTitle>
                     <div className="flex space-x-1">
-                      <Button size="sm" variant="ghost">
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleEditTarefa(tarefa)}
+                      >
                         <Edit className="w-3 h-3" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteTarefa(tarefa)}
+                      >
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
@@ -281,7 +349,7 @@ function Admin() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Tempo:</span>
-                      <span>{tarefa.tempoEstimado} min</span>
+                      <span>30 min</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Prioridade:</span>
@@ -303,7 +371,7 @@ function Admin() {
         <TabsContent value="agenda" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Agendamentos</h3>
-            <Button>
+            <Button onClick={handleCreateAgendamento}>
               <Plus className="w-4 h-4 mr-2" />
               Adicionar Agendamento
             </Button>
@@ -319,11 +387,14 @@ function Admin() {
             <CardContent>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {agenda?.slice(0, 20).map((item, index) => {
-                  const funcionario = funcionarios?.find(f => f.id === item.funcionario)
-                  const tarefa = tarefas?.find(t => t.id === item.tarefa)
+                  // Suporte para diferentes formatos de dados (Supabase vs estático)
+                  const funcionarioId = item.funcionario || item.funcionario_id
+                  const tarefaId = item.tarefa || item.tarefa_id
+                  const funcionario = funcionarios?.find(f => f.id === funcionarioId)
+                  const tarefa = tarefas?.find(t => t.id === tarefaId)
                   
                   return (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div key={item.id || index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <Badge variant="outline">{item.horario}</Badge>
                         <div className="flex items-center space-x-2">
@@ -337,10 +408,19 @@ function Admin() {
                         <span className="text-sm">{tarefa?.nome || item.tarefa}</span>
                       </div>
                       <div className="flex space-x-1">
-                        <Button size="sm" variant="ghost">
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => handleEditAgendamento(item)}
+                        >
                           <Edit className="w-3 h-3" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteAgendamento(item)}
+                        >
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
@@ -372,6 +452,15 @@ function Admin() {
         onClose={() => setTarefaFormOpen(false)}
         tarefa={editingTarefa}
         onSave={handleSaveTarefa}
+      />
+
+      <AgendamentoForm
+        isOpen={agendamentoFormOpen}
+        onClose={() => setAgendamentoFormOpen(false)}
+        agendamento={editingAgendamento}
+        funcionarios={funcionarios || []}
+        tarefas={tarefas || []}
+        onSave={handleSaveAgendamento}
       />
     </div>
   )

@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { useNotifications } from '../../contexts/NotificationContext'
+// import { useNotifications } from '../../contexts/NotificationContext'
 
 const CATEGORIAS = [
   'gestao', 'atendimento', 'marketing', 'engajamento', 
@@ -24,17 +24,42 @@ export default function TarefaForm({
   tarefa = null, 
   onSave 
 }) {
-  const { showSuccess, showError } = useNotifications()
+  // const { showSuccess, showError } = useNotifications()
+  const showSuccess = (message) => console.log('Sucesso:', message)
+  const showError = (message) => console.error('Erro:', message)
   const [loading, setLoading] = useState(false)
   
   const [formData, setFormData] = useState({
     id: tarefa?.id || '',
     nome: tarefa?.nome || '',
     categoria: tarefa?.categoria || 'gestao',
-    tempo_estimado: tarefa?.tempo_estimado || 30,
+    tempo_estimado: 30, // Sempre 30 minutos
     descricao: tarefa?.descricao || '',
     prioridade: tarefa?.prioridade || 'media'
   })
+
+  // Atualizar formData quando tarefa mudar, mas sempre manter 30 min
+  React.useEffect(() => {
+    if (tarefa) {
+      setFormData({
+        id: tarefa.id || '',
+        nome: tarefa.nome || '',
+        categoria: tarefa.categoria || 'gestao',
+        tempo_estimado: 30, // Sempre 30 minutos, independente do valor da tarefa
+        descricao: tarefa.descricao || '',
+        prioridade: tarefa.prioridade || 'media'
+      })
+    } else {
+      setFormData({
+        id: '',
+        nome: '',
+        categoria: 'gestao',
+        tempo_estimado: 30, // Sempre 30 minutos
+        descricao: '',
+        prioridade: 'media'
+      })
+    }
+  }, [tarefa, isOpen])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -46,13 +71,11 @@ export default function TarefaForm({
         throw new Error('Nome é obrigatório')
       }
       
-      if (!tarefa && !formData.id.trim()) {
-        throw new Error('ID é obrigatório')
+      if (!formData.id || !formData.id.trim()) {
+        throw new Error('ID é obrigatório e não pode estar vazio')
       }
 
-      if (formData.tempo_estimado <= 0) {
-        throw new Error('Tempo estimado deve ser maior que zero')
-      }
+      // Tempo sempre será 30 minutos, não precisa validar
 
       await onSave(formData)
       
@@ -138,14 +161,19 @@ export default function TarefaForm({
 
             <div className="space-y-2">
               <Label htmlFor="tempo_estimado">Tempo (minutos)</Label>
-              <Input
-                id="tempo_estimado"
-                type="number"
-                min="1"
-                value={formData.tempo_estimado}
-                onChange={(e) => handleChange('tempo_estimado', parseInt(e.target.value) || 0)}
-                required
-              />
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="tempo_estimado"
+                  type="number"
+                  value={30}
+                  readOnly
+                  disabled
+                  className="bg-gray-100 cursor-not-allowed"
+                />
+                <span className="text-sm text-gray-500">
+                  ⏱️ Todas as tarefas têm 30 minutos
+                </span>
+              </div>
             </div>
           </div>
 
