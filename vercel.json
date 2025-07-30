@@ -7,16 +7,36 @@
       "config": {
         "distDir": "frontend/dist"
       }
+    },
+    {
+      "src": "api/funcionarios.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/tarefas.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/agenda.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
     {
+      "src": "/api/funcionarios",
+      "dest": "/api/funcionarios.py"
+    },
+    {
+      "src": "/api/tarefas",
+      "dest": "/api/tarefas.py"
+    },
+    {
+      "src": "/api/agenda",
+      "dest": "/api/agenda.py"
+    },
+    {
       "src": "/(.*)",
       "dest": "/frontend/dist/$1"
     }
-  ],
-  "env": {
-    "VITE_SUPABASE_URL": "@vite_supabase_url",
-    "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key"
-  }
+  ]
 }
