@@ -85,12 +85,15 @@ def test():
     return jsonify({"message": "Backend funcionando!", "timestamp": str(datetime.now())})
 
 if __name__ == '__main__':
+    # Pega a porta do ambiente (Render, Heroku, etc.) ou usa 5000 como padrão
+    port = int(os.environ.get('PORT', 5000))
+    
     print("🚀 Iniciando backend simples...")
     print("📊 Dados carregados:")
     print(f"   - {len(data.get('funcionarios', []))} funcionários")
     print(f"   - {len(data.get('tarefas', []))} tarefas")
     print(f"   - {len(data.get('agenda', []))} agendamentos")
-    print("\n🌐 Servidor rodando em: http://localhost:5000")
-    print("🔗 Teste: http://localhost:5000/api/funcionarios")
+    print(f"\n🌐 Servidor rodando na porta: {port}")
+    print(f"🔗 Teste: http://localhost:{port}/api/funcionarios")
     
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
