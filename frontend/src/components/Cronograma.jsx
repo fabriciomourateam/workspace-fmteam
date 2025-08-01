@@ -61,7 +61,7 @@ function Cronograma() {
 
   const dataAnteriorComAgendamentos = () => {
     const dataAtual = dataSelecionada
-    const dataAnterior = datasComAgendamentos.reverse().find(data => data < dataAtual)
+    const dataAnterior = [...datasComAgendamentos].reverse().find(data => data < dataAtual)
     if (dataAnterior) {
       setDataSelecionada(dataAnterior)
     }
