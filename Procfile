@@ -1,1 +1,1 @@
-web: npm run start
+web: gunicorn --bind 0.0.0.0:$PORT main:application
