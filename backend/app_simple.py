@@ -92,22 +92,39 @@ def test():
 def serve_frontend():
     """Serve o index.html do frontend"""
     try:
-        return send_file(os.path.join(FRONTEND_DIST, 'index.html'))
-    except:
-        return jsonify({"message": "Frontend não encontrado. Acesse /api/ para testar a API."})
+        if os.path.exists(os.path.join(FRONTEND_DIST, 'index.html')):
+            return send_file(os.path.join(FRONTEND_DIST, 'index.html'))
+        else:
+            return jsonify({
+                "message": "🚀 Backend funcionando!", 
+                "frontend": "Compilando...",
+                "api": "/api/funcionarios"
+            })
+    except Exception as e:
+        return jsonify({
+            "message": "🚀 Backend funcionando!", 
+            "error": str(e),
+            "api": "/api/funcionarios"
+        })
 
 @app.route('/<path:path>')
 def serve_static(path):
     """Serve arquivos estáticos do frontend"""
+    # Ignora rotas da API
+    if path.startswith('api/'):
+        return jsonify({"error": "Rota da API não encontrada"}), 404
+    
     try:
         # Se o arquivo existe, serve ele
         if os.path.exists(os.path.join(FRONTEND_DIST, path)):
             return send_from_directory(FRONTEND_DIST, path)
         # Senão, serve o index.html (para SPA routing)
-        else:
+        elif os.path.exists(os.path.join(FRONTEND_DIST, 'index.html')):
             return send_file(os.path.join(FRONTEND_DIST, 'index.html'))
-    except:
-        return jsonify({"error": "Arquivo não encontrado"}), 404
+        else:
+            return jsonify({"error": "Frontend não compilado ainda"}), 404
+    except Exception as e:
+        return jsonify({"error": f"Erro ao servir arquivo: {str(e)}"}), 404
 
 if __name__ == '__main__':
     # Pega a porta do ambiente (Render, Heroku, etc.) ou usa 5000 como padrão
