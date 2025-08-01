@@ -31,6 +31,25 @@ CREATE TABLE agenda (
   funcionario_id TEXT NOT NULL REFERENCES funcionarios(id) ON DELETE CASCADE,
   tarefa_id TEXT NOT NULL REFERENCES tarefas(id) ON DELETE CASCADE,
   data DATE DEFAULT CURRENT_DATE,
+  status TEXT DEFAULT 'nao_iniciada', -- 'nao_iniciada', 'em_andamento', 'concluida', 'atrasada'
+  tempo_inicio TIMESTAMP WITH TIME ZONE,
+  tempo_fim TIMESTAMP WITH TIME ZONE,
+  tempo_real INTEGER, -- em minutos
+  observacoes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela de metas
+CREATE TABLE metas (
+  id SERIAL PRIMARY KEY,
+  funcionario_id TEXT NOT NULL REFERENCES funcionarios(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL, -- 'diaria', 'semanal', 'mensal'
+  periodo DATE NOT NULL,
+  meta_horas INTEGER NOT NULL, -- em minutos
+  meta_tarefas INTEGER NOT NULL,
+  horas_realizadas INTEGER DEFAULT 0,
+  tarefas_realizadas INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

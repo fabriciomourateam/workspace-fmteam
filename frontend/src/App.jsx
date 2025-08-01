@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // import NotificationContainer from './components/NotificationContainer'
 // import GlobalSearch from './components/GlobalSearch'
 import Dashboard from './components/DashboardNew'
+import DashboardAvancado from './components/DashboardAvancado'
+import MetasKPIs from './components/MetasKPIs'
 import Cronograma from './components/Cronograma'
 import Processos from './components/Processos'
 import Relatorios from './components/Relatorios'
@@ -34,11 +36,13 @@ function Navigation() {
   
   const navItems = [
     { path: '/', icon: BarChart3, label: 'Dashboard', shortcut: '1' },
-    { path: '/cronograma', icon: Calendar, label: 'Cronograma', shortcut: '2' },
-    { path: '/calendario', icon: CalendarDays, label: 'Calendário', shortcut: '3' },
-    { path: '/processos', icon: FileText, label: 'Processos', shortcut: '4' },
-    { path: '/relatorios', icon: Users, label: 'Relatórios', shortcut: '5' },
-    { path: '/admin', icon: Settings, label: 'Admin', shortcut: '6' }
+    { path: '/dashboard-avancado', icon: Clock, label: 'Dashboard Avançado', shortcut: '2' },
+    { path: '/metas', icon: Filter, label: 'Metas & KPIs', shortcut: '3' },
+    { path: '/cronograma', icon: Calendar, label: 'Cronograma', shortcut: '4' },
+    { path: '/calendario', icon: CalendarDays, label: 'Calendário', shortcut: '5' },
+    { path: '/processos', icon: FileText, label: 'Processos', shortcut: '6' },
+    { path: '/relatorios', icon: Users, label: 'Relatórios', shortcut: '7' },
+    { path: '/admin', icon: Settings, label: 'Admin', shortcut: '8' }
   ]
 
   // Keyboard shortcuts
@@ -246,6 +250,8 @@ function AppContent() {
           <div className="transition-all duration-300">
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard-avancado" element={<DashboardAvancado />} />
+              <Route path="/metas" element={<MetasKPIs />} />
               <Route path="/cronograma" element={<Cronograma />} />
               <Route path="/calendario" element={<Calendario />} />
               <Route path="/processos" element={<Processos />} />

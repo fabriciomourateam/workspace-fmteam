@@ -44,6 +44,29 @@ function Cronograma() {
   const [editingAgendamento, setEditingAgendamento] = useState(null)
   const [novoAgendamento, setNovoAgendamento] = useState({ horario: '', funcionario_id: '' })
 
+  // Função para encontrar datas com agendamentos
+  const datasComAgendamentos = useMemo(() => {
+    if (!agenda) return []
+    const datas = [...new Set(agenda.map(item => item.data || new Date().toISOString().split('T')[0]))]
+    return datas.sort()
+  }, [agenda])
+
+  const proximaDataComAgendamentos = () => {
+    const dataAtual = dataSelecionada
+    const proximaData = datasComAgendamentos.find(data => data > dataAtual)
+    if (proximaData) {
+      setDataSelecionada(proximaData)
+    }
+  }
+
+  const dataAnteriorComAgendamentos = () => {
+    const dataAtual = dataSelecionada
+    const dataAnterior = datasComAgendamentos.reverse().find(data => data < dataAtual)
+    if (dataAnterior) {
+      setDataSelecionada(dataAnterior)
+    }
+  }
+
   // Função para recarregar todos os dados
   const refetchAll = () => {
     refetchFuncionarios()
@@ -347,18 +370,89 @@ function Cronograma() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Cronograma</h2>
-          <p className="text-gray-600 dark:text-gray-400">Visualização das atividades por funcionário e horário</p>
+          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <span>
+              {new Date(dataSelecionada).toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </span>
+            <Badge variant="secondary">
+              {dadosFiltrados.length} agendamento{dadosFiltrados.length !== 1 ? 's' : ''}
+            </Badge>
+          </div>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-gray-500" />
-            <input
-              type="date"
-              value={dataSelecionada}
-              onChange={(e) => setDataSelecionada(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            />
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const data = new Date(dataSelecionada)
+                  data.setDate(data.getDate() - 1)
+                  setDataSelecionada(data.toISOString().split('T')[0])
+                }}
+                className="px-2 py-1"
+              >
+                ←
+              </Button>
+              <input
+                type="date"
+                value={dataSelecionada}
+                onChange={(e) => setDataSelecionada(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const data = new Date(dataSelecionada)
+                  data.setDate(data.getDate() + 1)
+                  setDataSelecionada(data.toISOString().split('T')[0])
+                }}
+                className="px-2 py-1"
+              >
+                →
+              </Button>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDataSelecionada(new Date().toISOString().split('T')[0])}
+              className="text-xs"
+            >
+              Hoje
+            </Button>
+          </div>
+          
+          {datasComAgendamentos.length > 1 && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-gray-500">Navegar:</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={dataAnteriorComAgendamentos}
+                className="text-xs px-2 py-1"
+                disabled={!datasComAgendamentos.some(data => data < dataSelecionada)}
+              >
+                ← Data anterior
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={proximaDataComAgendamentos}
+                className="text-xs px-2 py-1"
+                disabled={!datasComAgendamentos.some(data => data > dataSelecionada)}
+              >
+                Próxima data →
+              </Button>
+            </div>
+          )}
           </div>
           
           <Select value={funcionarioSelecionado} onValueChange={setFuncionarioSelecionado}>
