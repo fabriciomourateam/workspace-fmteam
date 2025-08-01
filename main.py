@@ -19,4 +19,5 @@ if __name__ == '__main__':
     # Fallback para desenvolvimento local
     port = int(os.environ.get('PORT', 8080))
     print(f"🚀 Iniciando aplicação na porta {port}")
+    print("⚠️  AVISO: Usando Flask dev server - deveria usar gunicorn!")
     app.run(host='0.0.0.0', port=port, debug=False)
