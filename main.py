@@ -12,8 +12,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 from app_simple import app
 
 if __name__ == '__main__':
-    # Railway usa PORT do ambiente
-    port = int(os.environ.get('PORT', 8080))
+    # Render usa PORT do ambiente (padrão 10000)
+    port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Iniciando API na porta {port}")
-    print("📡 Backend funcionando - só API")
+    print("📡 Render Backend - API funcionando")
+    print("🔗 Endpoints: /api/funcionarios, /api/tarefas, /api/agenda")
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
