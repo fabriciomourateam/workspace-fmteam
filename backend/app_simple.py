@@ -15,6 +15,14 @@ CORS(app)
 # Configuração para servir arquivos estáticos do frontend
 FRONTEND_DIST = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'dist')
 
+# Debug: verificar se o diretório existe
+print(f"🔍 Procurando frontend em: {FRONTEND_DIST}")
+print(f"📁 Diretório existe: {os.path.exists(FRONTEND_DIST)}")
+if os.path.exists(FRONTEND_DIST):
+    print(f"📄 Arquivos encontrados: {os.listdir(FRONTEND_DIST)}")
+else:
+    print("❌ Diretório frontend/dist não encontrado!")
+
 # Carrega dados do JSON uma vez
 DATA_PATH = os.path.join(os.path.dirname(__file__), 'src', 'data', 'agenda.json')
 
