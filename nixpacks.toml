@@ -13,4 +13,4 @@ cmds = [
 ]
 
 [start]
-cmd = 'python main.py'
+cmd = 'gunicorn --bind 0.0.0.0:$PORT main:application'
