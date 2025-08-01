@@ -5,23 +5,16 @@ Backend minimalista que funciona garantidamente
 import json
 import os
 from datetime import datetime
-from flask import Flask, jsonify, send_from_directory, send_file
+from flask import Flask, jsonify
 from flask_cors import CORS
 
-# Cria app Flask simples
+# Cria app Flask simples - só API
 app = Flask(__name__)
 CORS(app)
 
-# Configuração para servir arquivos estáticos do frontend
-FRONTEND_DIST = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'dist')
-
-# Debug: verificar se o diretório existe
-print(f"🔍 Procurando frontend em: {FRONTEND_DIST}")
-print(f"📁 Diretório existe: {os.path.exists(FRONTEND_DIST)}")
-if os.path.exists(FRONTEND_DIST):
-    print(f"📄 Arquivos encontrados: {os.listdir(FRONTEND_DIST)}")
-else:
-    print("❌ Diretório frontend/dist não encontrado!")
+print("🚀 Iniciando API backend...")
+print("📡 CORS habilitado para todos os domínios")
+print("🔗 Endpoints disponíveis: /api/funcionarios, /api/tarefas, /api/agenda")
 
 # Carrega dados do JSON uma vez
 DATA_PATH = os.path.join(os.path.dirname(__file__), 'src', 'data', 'agenda.json')
@@ -95,44 +88,20 @@ def health_simple():
 def test():
     return jsonify({"message": "Backend funcionando!", "timestamp": str(datetime.now())})
 
-# Rotas para servir o frontend React
+# Rota principal - só para mostrar que a API está funcionando
 @app.route('/')
-def serve_frontend():
-    """Serve o index.html do frontend"""
-    try:
-        if os.path.exists(os.path.join(FRONTEND_DIST, 'index.html')):
-            return send_file(os.path.join(FRONTEND_DIST, 'index.html'))
-        else:
-            return jsonify({
-                "message": "🚀 Backend funcionando!", 
-                "frontend": "Compilando...",
-                "api": "/api/funcionarios"
-            })
-    except Exception as e:
-        return jsonify({
-            "message": "🚀 Backend funcionando!", 
-            "error": str(e),
-            "api": "/api/funcionarios"
-        })
-
-@app.route('/<path:path>')
-def serve_static(path):
-    """Serve arquivos estáticos do frontend"""
-    # Ignora rotas da API
-    if path.startswith('api/'):
-        return jsonify({"error": "Rota da API não encontrada"}), 404
-    
-    try:
-        # Se o arquivo existe, serve ele
-        if os.path.exists(os.path.join(FRONTEND_DIST, path)):
-            return send_from_directory(FRONTEND_DIST, path)
-        # Senão, serve o index.html (para SPA routing)
-        elif os.path.exists(os.path.join(FRONTEND_DIST, 'index.html')):
-            return send_file(os.path.join(FRONTEND_DIST, 'index.html'))
-        else:
-            return jsonify({"error": "Frontend não compilado ainda"}), 404
-    except Exception as e:
-        return jsonify({"error": f"Erro ao servir arquivo: {str(e)}"}), 404
+def api_info():
+    """Informações da API"""
+    return jsonify({
+        "message": "🚀 API funcionando!",
+        "endpoints": {
+            "funcionarios": "/api/funcionarios",
+            "tarefas": "/api/tarefas", 
+            "agenda": "/api/agenda",
+            "health": "/api/health"
+        },
+        "status": "online"
+    })
 
 if __name__ == '__main__':
     # Pega a porta do ambiente (Render, Heroku, etc.) ou usa 5000 como padrão
