@@ -24,6 +24,7 @@ const categoriasCores = {
 function Cronograma() {
   const [funcionarioSelecionado, setFuncionarioSelecionado] = useState('todos')
   const [visualizacao, setVisualizacao] = useState('timeline') // timeline ou grade
+  const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0])
   // const { showSuccess, showError } = useNotifications()
   const showSuccess = (message) => alert('Sucesso: ' + message)
   const showError = (message) => alert('Erro: ' + message)
@@ -52,7 +53,11 @@ function Cronograma() {
 
   // Handlers para agendamentos
   const handleAddAgendamento = (horario, funcionarioId) => {
-    setNovoAgendamento({ horario, funcionario_id: funcionarioId })
+    setNovoAgendamento({ 
+      horario, 
+      funcionario_id: funcionarioId,
+      data: dataSelecionada 
+    })
     setEditingAgendamento(null)
     setAgendamentoFormOpen(true)
   }
@@ -104,11 +109,22 @@ function Cronograma() {
   // Dados filtrados
   const dadosFiltrados = useMemo(() => {
     if (!agenda) return []
-    if (funcionarioSelecionado === 'todos') {
-      return agenda
+    
+    let filtrados = agenda
+    
+    // Filtrar por data
+    filtrados = filtrados.filter(item => {
+      const itemData = item.data || new Date().toISOString().split('T')[0]
+      return itemData === dataSelecionada
+    })
+    
+    // Filtrar por funcionário
+    if (funcionarioSelecionado !== 'todos') {
+      filtrados = filtrados.filter(item => item.funcionario === funcionarioSelecionado)
     }
-    return agenda.filter(item => item.funcionario === funcionarioSelecionado)
-  }, [agenda, funcionarioSelecionado])
+    
+    return filtrados
+  }, [agenda, funcionarioSelecionado, dataSelecionada])
 
   // Organizar dados por funcionário e horário
   const cronogramaPorFuncionario = useMemo(() => {
@@ -335,6 +351,16 @@ function Cronograma() {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-gray-500" />
+            <input
+              type="date"
+              value={dataSelecionada}
+              onChange={(e) => setDataSelecionada(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            />
+          </div>
+          
           <Select value={funcionarioSelecionado} onValueChange={setFuncionarioSelecionado}>
             <SelectTrigger className="w-[180px]">
               <User className="w-4 h-4 mr-2" />
@@ -352,7 +378,7 @@ function Cronograma() {
           
           <Select value={visualizacao} onValueChange={setVisualizacao}>
             <SelectTrigger className="w-[140px]">
-              <Calendar className="w-4 h-4 mr-2" />
+              <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Visualização" />
             </SelectTrigger>
             <SelectContent>

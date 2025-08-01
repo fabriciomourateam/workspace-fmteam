@@ -27,6 +27,21 @@ export default function AgendamentoForm({
     data: agendamento?.data || new Date().toISOString().split('T')[0]
   })
 
+  const [tipoAgendamento, setTipoAgendamento] = useState('unico') // 'unico' ou 'recorrente'
+  const [diasSelecionados, setDiasSelecionados] = useState([])
+  const [dataInicio, setDataInicio] = useState(new Date().toISOString().split('T')[0])
+  const [dataFim, setDataFim] = useState('')
+
+  const diasSemana = [
+    { id: 1, nome: 'Segunda', abrev: 'Seg' },
+    { id: 2, nome: 'Terça', abrev: 'Ter' },
+    { id: 3, nome: 'Quarta', abrev: 'Qua' },
+    { id: 4, nome: 'Quinta', abrev: 'Qui' },
+    { id: 5, nome: 'Sexta', abrev: 'Sex' },
+    { id: 6, nome: 'Sábado', abrev: 'Sáb' },
+    { id: 0, nome: 'Domingo', abrev: 'Dom' }
+  ]
+
   // Gerar horários de 30 em 30 minutos
   const horarios = []
   for (let h = 8; h <= 18; h++) {
@@ -35,6 +50,22 @@ export default function AgendamentoForm({
       const minuto = m.toString().padStart(2, '0')
       horarios.push(`${hora}:${minuto}`)
     }
+  }
+
+  // Função para gerar datas recorrentes
+  const gerarDatasRecorrentes = (dataInicio, dataFim, diasSemana) => {
+    const datas = []
+    const inicio = new Date(dataInicio)
+    const fim = new Date(dataFim)
+    
+    for (let data = new Date(inicio); data <= fim; data.setDate(data.getDate() + 1)) {
+      const diaSemana = data.getDay()
+      if (diasSemana.includes(diaSemana)) {
+        datas.push(new Date(data).toISOString().split('T')[0])
+      }
+    }
+    
+    return datas
   }
 
   const handleSubmit = async (e) => {
@@ -46,13 +77,38 @@ export default function AgendamentoForm({
         throw new Error('Todos os campos são obrigatórios')
       }
 
-      await onSave(formData)
-      
-      showSuccess(
-        agendamento 
-          ? 'Agendamento atualizado com sucesso!' 
-          : 'Agendamento criado com sucesso!'
-      )
+      if (tipoAgendamento === 'recorrente') {
+        if (diasSelecionados.length === 0) {
+          throw new Error('Selecione pelo menos um dia da semana')
+        }
+        if (!dataInicio || !dataFim) {
+          throw new Error('Selecione as datas de início e fim')
+        }
+        if (new Date(dataFim) < new Date(dataInicio)) {
+          throw new Error('Data fim deve ser posterior à data início')
+        }
+
+        // Gerar múltiplos agendamentos
+        const datas = gerarDatasRecorrentes(dataInicio, dataFim, diasSelecionados)
+        
+        for (const data of datas) {
+          await onSave({
+            ...formData,
+            data: data
+          })
+        }
+        
+        showSuccess(`${datas.length} agendamentos criados com sucesso!`)
+      } else {
+        // Agendamento único
+        await onSave(formData)
+        
+        showSuccess(
+          agendamento 
+            ? 'Agendamento atualizado com sucesso!' 
+            : 'Agendamento criado com sucesso!'
+        )
+      }
       
       onClose()
     } catch (error) {
@@ -67,6 +123,18 @@ export default function AgendamentoForm({
       ...prev,
       [field]: value
     }))
+  }
+
+  const toggleDiaSemana = (diaId) => {
+    setDiasSelecionados(prev => 
+      prev.includes(diaId) 
+        ? prev.filter(id => id !== diaId)
+        : [...prev, diaId]
+    )
+  }
+
+  const selecionarDiasUteis = () => {
+    setDiasSelecionados([1, 2, 3, 4, 5]) // Segunda a Sexta
   }
 
   return (
@@ -85,17 +153,106 @@ export default function AgendamentoForm({
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Tipo de agendamento */}
           <div className="space-y-2">
-            <Label htmlFor="data">Data</Label>
-            <input
-              id="data"
-              type="date"
-              value={formData.data}
-              onChange={(e) => handleChange('data', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+            <Label>Tipo de Agendamento</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  value="unico"
+                  checked={tipoAgendamento === 'unico'}
+                  onChange={(e) => setTipoAgendamento(e.target.value)}
+                  className="text-blue-600"
+                />
+                <span>Agendamento único</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  value="recorrente"
+                  checked={tipoAgendamento === 'recorrente'}
+                  onChange={(e) => setTipoAgendamento(e.target.value)}
+                  className="text-blue-600"
+                />
+                <span>Agendamento recorrente</span>
+              </label>
+            </div>
           </div>
+
+          {/* Data única */}
+          {tipoAgendamento === 'unico' && (
+            <div className="space-y-2">
+              <Label htmlFor="data">Data</Label>
+              <input
+                id="data"
+                type="date"
+                value={formData.data}
+                onChange={(e) => handleChange('data', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          )}
+
+          {/* Agendamento recorrente */}
+          {tipoAgendamento === 'recorrente' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Dias da Semana</Label>
+                <div className="flex flex-wrap gap-2">
+                  {diasSemana.map(dia => (
+                    <button
+                      key={dia.id}
+                      type="button"
+                      onClick={() => toggleDiaSemana(dia.id)}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        diasSelecionados.includes(dia.id)
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {dia.abrev}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={selecionarDiasUteis}
+                  className="mt-2"
+                >
+                  Selecionar dias úteis (Seg-Sex)
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dataInicio">Data Início</Label>
+                  <input
+                    id="dataInicio"
+                    type="date"
+                    value={dataInicio}
+                    onChange={(e) => setDataInicio(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dataFim">Data Fim</Label>
+                  <input
+                    id="dataFim"
+                    type="date"
+                    value={dataFim}
+                    onChange={(e) => setDataFim(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="horario">Horário</Label>
