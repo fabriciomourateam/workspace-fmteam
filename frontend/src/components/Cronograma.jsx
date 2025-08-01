@@ -133,18 +133,29 @@ function Cronograma() {
   const dadosFiltrados = useMemo(() => {
     if (!agenda) return []
     
+    console.log('=== DEBUG CRONOGRAMA ===')
+    console.log('Agenda completa:', agenda)
+    console.log('Data selecionada:', dataSelecionada)
+    console.log('Funcionário selecionado:', funcionarioSelecionado)
+    
     let filtrados = agenda
     
     // Filtrar por data
     filtrados = filtrados.filter(item => {
       const itemData = item.data || new Date().toISOString().split('T')[0]
+      console.log(`Item: ${item.id}, Data do item: ${itemData}, Data selecionada: ${dataSelecionada}, Match: ${itemData === dataSelecionada}`)
       return itemData === dataSelecionada
     })
+    
+    console.log('Dados filtrados por data:', filtrados)
     
     // Filtrar por funcionário
     if (funcionarioSelecionado !== 'todos') {
       filtrados = filtrados.filter(item => item.funcionario === funcionarioSelecionado)
     }
+    
+    console.log('Dados finais filtrados:', filtrados)
+    console.log('=== FIM DEBUG ===')
     
     return filtrados
   }, [agenda, funcionarioSelecionado, dataSelecionada])

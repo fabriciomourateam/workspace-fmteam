@@ -77,6 +77,10 @@ export default function AgendamentoForm({
         throw new Error('Todos os campos são obrigatórios')
       }
 
+      console.log('=== DEBUG AGENDAMENTO FORM ===')
+      console.log('Dados do formulário:', formData)
+      console.log('Tipo de agendamento:', tipoAgendamento)
+
       if (tipoAgendamento === 'recorrente') {
         if (diasSelecionados.length === 0) {
           throw new Error('Selecione pelo menos um dia da semana')
@@ -92,15 +96,18 @@ export default function AgendamentoForm({
         const datas = gerarDatasRecorrentes(dataInicio, dataFim, diasSelecionados)
         
         for (const data of datas) {
-          await onSave({
+          const agendamentoData = {
             ...formData,
             data: data
-          })
+          }
+          console.log('Salvando agendamento recorrente:', agendamentoData)
+          await onSave(agendamentoData)
         }
         
         showSuccess(`${datas.length} agendamentos criados com sucesso!`)
       } else {
         // Agendamento único
+        console.log('Salvando agendamento único:', formData)
         await onSave(formData)
         
         showSuccess(
@@ -112,6 +119,7 @@ export default function AgendamentoForm({
       
       onClose()
     } catch (error) {
+      console.error('Erro ao salvar agendamento:', error)
       showError(error.message)
     } finally {
       setLoading(false)
