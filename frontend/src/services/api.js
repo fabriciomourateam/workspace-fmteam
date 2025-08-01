@@ -3,12 +3,16 @@
  */
 import { supabaseService } from './supabase.js'
 
+// Configuração da API (Railway backend como fallback)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 // Debug log
 console.log('🔧 Backend Configuration:', {
   mode: import.meta.env.MODE,
   hasSupabaseUrl: !!import.meta.env.VITE_SUPABASE_URL,
   hasSupabaseKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
-  backend: 'Supabase'
+  apiUrl: API_BASE_URL,
+  backend: 'Supabase + Railway API'
 });
 
 
