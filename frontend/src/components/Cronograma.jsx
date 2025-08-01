@@ -453,7 +453,6 @@ function Cronograma() {
               </Button>
             </div>
           )}
-          </div>
           
           <Select value={funcionarioSelecionado} onValueChange={setFuncionarioSelecionado}>
             <SelectTrigger className="w-[180px]">
