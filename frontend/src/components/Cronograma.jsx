@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Clock, User, Filter, Calendar } from 'lucide-react'
+import { Clock, User, Users, Filter, Calendar } from 'lucide-react'
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
@@ -123,13 +123,6 @@ function Cronograma() {
     }
   }
 
-  // Horários únicos ordenados
-  const horarios = useMemo(() => {
-    if (!agenda) return []
-    const horariosSet = new Set(agenda.map(item => item.horario))
-    return Array.from(horariosSet).sort()
-  }, [agenda])
-
   // Dados filtrados
   const dadosFiltrados = useMemo(() => {
     if (!agenda) return []
@@ -150,13 +143,33 @@ function Cronograma() {
     return filtrados
   }, [agenda, funcionarioSelecionado, dataSelecionada])
 
+  // Horários únicos ordenados (baseado nos dados filtrados)
+  const horarios = useMemo(() => {
+    if (!dadosFiltrados || dadosFiltrados.length === 0) {
+      // Se não há dados filtrados, usar todos os horários da agenda para permitir adicionar tarefas
+      if (!agenda) return []
+      const horariosSet = new Set(agenda.filter(item => {
+        const itemData = item.data || new Date().toISOString().split('T')[0]
+        return itemData === dataSelecionada
+      }).map(item => item.horario))
+      return Array.from(horariosSet).sort()
+    }
+    const horariosSet = new Set(dadosFiltrados.map(item => item.horario))
+    return Array.from(horariosSet).sort()
+  }, [dadosFiltrados, agenda, dataSelecionada])
+
   // Organizar dados por funcionário e horário
   const cronogramaPorFuncionario = useMemo(() => {
     if (!funcionarios || !tarefas) return {}
     
     const resultado = {}
     
-    funcionarios.forEach(funcionario => {
+    // Filtrar funcionários baseado na seleção
+    const funcionariosFiltrados = funcionarioSelecionado === 'todos' 
+      ? funcionarios 
+      : funcionarios.filter(f => f.id === funcionarioSelecionado)
+    
+    funcionariosFiltrados.forEach(funcionario => {
       resultado[funcionario.id] = {
         ...funcionario,
         tarefas: {}
@@ -178,7 +191,7 @@ function Cronograma() {
     })
     
     return resultado
-  }, [funcionarios, tarefas, dadosFiltrados, horarios])
+  }, [funcionarios, tarefas, dadosFiltrados, horarios, funcionarioSelecionado])
 
   const TarefaCard = ({ tarefa, horario, funcionarioId }) => {
     if (!tarefa) {
@@ -410,7 +423,7 @@ function Cronograma() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Cronograma</h2>
           <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
             <span>
-              {new Date(dataSelecionada).toLocaleDateString('pt-BR', { 
+              {new Date(dataSelecionada + 'T00:00:00').toLocaleDateString('pt-BR', { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
@@ -493,20 +506,53 @@ function Cronograma() {
             </div>
           )}
           
-          <Select value={funcionarioSelecionado} onValueChange={setFuncionarioSelecionado}>
-            <SelectTrigger className="w-[180px]">
-              <User className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Funcionário" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os funcionários</SelectItem>
-              {funcionarios?.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => (
-                <SelectItem key={funcionario.id} value={funcionario.id}>
-                  {funcionario.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Filtros por Funcionário */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Funcionários:</span>
+            </div>
+            
+            <Button
+              variant={funcionarioSelecionado === 'todos' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFuncionarioSelecionado('todos')}
+              className="flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" />
+              Todos ({agenda?.filter(item => {
+                const itemData = item.data || new Date().toISOString().split('T')[0]
+                return itemData === dataSelecionada
+              }).length || 0})
+            </Button>
+            
+            {funcionarios?.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => {
+              const tarefasFuncionario = agenda?.filter(item => {
+                const itemData = item.data || new Date().toISOString().split('T')[0]
+                return itemData === dataSelecionada && item.funcionario === funcionario.id
+              }).length || 0
+              return (
+                <Button
+                  key={funcionario.id}
+                  variant={funcionarioSelecionado === funcionario.id ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFuncionarioSelecionado(funcionario.id)}
+                  className="flex items-center gap-2"
+                  style={{
+                    backgroundColor: funcionarioSelecionado === funcionario.id ? funcionario.cor : 'transparent',
+                    borderColor: funcionario.cor,
+                    color: funcionarioSelecionado === funcionario.id ? 'white' : funcionario.cor
+                  }}
+                >
+                  <div 
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: funcionario.cor }}
+                  />
+                  {funcionario.nome} ({tarefasFuncionario})
+                </Button>
+              )
+            })}
+          </div>
           
           <Select value={visualizacao} onValueChange={setVisualizacao}>
             <SelectTrigger className="w-[140px]">
@@ -520,6 +566,64 @@ function Cronograma() {
           </Select>
         </div>
       </div>
+
+      {/* Resumo do dia */}
+      {dadosFiltrados.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium">Total de Agendamentos</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-600 mt-1">
+                {dadosFiltrados.length}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium">Funcionários Ativos</span>
+              </div>
+              <p className="text-2xl font-bold text-green-600 mt-1">
+                {new Set(dadosFiltrados.map(item => item.funcionario)).size}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-purple-600" />
+                <span className="text-sm font-medium">Tempo Estimado</span>
+              </div>
+              <p className="text-2xl font-bold text-purple-600 mt-1">
+                {Math.round(dadosFiltrados.reduce((acc, item) => {
+                  const tarefa = tarefas?.find(t => t.id === item.tarefa)
+                  return acc + (tarefa?.tempo_estimado || 30)
+                }, 0) / 60)}h
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+                  <span className="text-white text-xs">✓</span>
+                </div>
+                <span className="text-sm font-medium">Concluídas</span>
+              </div>
+              <p className="text-2xl font-bold text-green-600 mt-1">
+                {dadosFiltrados.filter(item => item.status === 'concluida').length}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Legenda de categorias */}
       <Card>
