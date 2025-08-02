@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useFuncionarios, useAgenda } from '../hooks/useApi'
 import supabaseService from '../services/supabase'
-import { formatarHorarioIntervalo } from '../utils/timeUtils'
+import { formatarHorarioIntervalo, formatarData, isDataValida } from '../utils/timeUtils'
 
 export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
@@ -38,10 +38,19 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
 
   // Filtrar agendamentos baseado nos filtros e busca
   const agendamentosFiltrados = agenda?.filter(item => {
-    // Filtros
+    // Filtros por funcionário
     if (filtros.funcionario_id !== 'todos' && item.funcionario !== filtros.funcionario_id) return false
-    if (filtros.data_inicio && item.data < filtros.data_inicio) return false
-    if (filtros.data_fim && item.data > filtros.data_fim) return false
+    
+    // Filtros por data - garantir formato correto
+    const itemData = item.data || new Date().toISOString().split('T')[0]
+    if (filtros.data_inicio && isDataValida(filtros.data_inicio)) {
+      if (itemData < filtros.data_inicio) return false
+    }
+    if (filtros.data_fim && isDataValida(filtros.data_fim)) {
+      if (itemData > filtros.data_fim) return false
+    }
+    
+    // Filtros por status
     if (filtros.status !== 'todos' && item.status !== filtros.status) return false
     
     // Busca por texto
@@ -49,8 +58,8 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
       const funcionario = funcionarios?.find(f => f.id === item.funcionario)
       const buscaLower = busca.toLowerCase()
       const matchFuncionario = funcionario?.nome.toLowerCase().includes(buscaLower)
-      const matchData = item.data?.includes(busca)
-      const matchHorario = item.horario?.includes(busca)
+      const matchData = formatarData(itemData).includes(busca) || itemData.includes(busca)
+      const matchHorario = item.horario?.includes(busca) || formatarHorarioIntervalo(item.horario).toLowerCase().includes(buscaLower)
       
       if (!matchFuncionario && !matchData && !matchHorario) return false
     }
@@ -141,11 +150,14 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
             <label className="text-sm font-medium">Buscar Agendamentos</label>
             <input
               type="text"
-              placeholder="Buscar por funcionário, data ou horário..."
+              placeholder="Buscar por funcionário, data (DD/MM/AAAA) ou horário..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <div className="text-xs text-gray-500">
+              Exemplos: "Michelle", "02/08/2025", "08:00", "08:00 às 08:30"
+            </div>
           </div>
 
           {/* Filtros */}
@@ -180,7 +192,12 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
                   <input
                     type="date"
                     value={filtros.data_inicio}
-                    onChange={(e) => setFiltros(prev => ({ ...prev, data_inicio: e.target.value }))}
+                    onChange={(e) => {
+                      const novaData = e.target.value
+                      if (!novaData || isDataValida(novaData)) {
+                        setFiltros(prev => ({ ...prev, data_inicio: novaData }))
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -190,9 +207,19 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
                   <input
                     type="date"
                     value={filtros.data_fim}
-                    onChange={(e) => setFiltros(prev => ({ ...prev, data_fim: e.target.value }))}
+                    onChange={(e) => {
+                      const novaData = e.target.value
+                      if (!novaData || isDataValida(novaData)) {
+                        setFiltros(prev => ({ ...prev, data_fim: novaData }))
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  {filtros.data_inicio && filtros.data_fim && filtros.data_fim < filtros.data_inicio && (
+                    <div className="text-xs text-red-500">
+                      Data fim deve ser posterior à data início
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -289,7 +316,7 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            <span>{new Date(agendamento.data || new Date()).toLocaleDateString('pt-BR')}</span>
+                            <span>{formatarData(agendamento.data)}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
