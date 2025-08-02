@@ -8,6 +8,7 @@ import {
   Calendar, 
   Clock, 
   User, 
+  Users,
   Plus, 
   ChevronLeft, 
   ChevronRight,
@@ -238,25 +239,41 @@ export default function CalendarioAgendamentos() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-gray-500" />
-                  <Select value={funcionarioFiltro} onValueChange={setFuncionarioFiltro}>
-                    <SelectTrigger className="w-[160px]">
-                      <SelectValue placeholder="Funcionário" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      {funcionarios?.map(funcionario => (
-                        <SelectItem key={funcionario.id} value={funcionario.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: funcionario.cor }}
-                            />
-                            {funcionario.nome}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <span className="text-sm font-medium text-gray-700">Funcionários:</span>
+                </div>
+                
+                {/* Botões de Funcionários */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant={funcionarioFiltro === 'todos' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setFuncionarioFiltro('todos')}
+                    className="flex items-center gap-2"
+                  >
+                    <Users className="w-4 h-4" />
+                    Todos
+                  </Button>
+                  
+                  {funcionarios?.map(funcionario => (
+                    <Button
+                      key={funcionario.id}
+                      variant={funcionarioFiltro === funcionario.id ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFuncionarioFiltro(funcionario.id)}
+                      className="flex items-center gap-2"
+                      style={{
+                        backgroundColor: funcionarioFiltro === funcionario.id ? funcionario.cor : 'transparent',
+                        borderColor: funcionario.cor,
+                        color: funcionarioFiltro === funcionario.id ? 'white' : funcionario.cor
+                      }}
+                    >
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: funcionario.cor }}
+                      />
+                      {funcionario.nome}
+                    </Button>
+                  ))}
                 </div>
                 
                 <Button
