@@ -13,6 +13,7 @@ import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
 import { useNotifications } from '../contexts/NotificationContext'
+import { formatarHorarioIntervalo } from '../utils/timeUtils'
 
 function Admin() {
   const [modalAberto, setModalAberto] = useState(false)
@@ -704,7 +705,7 @@ function Admin() {
                 return (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-4">
-                      <Badge variant="outline">{item.horario}</Badge>
+                      <Badge variant="outline">{formatarHorarioIntervalo(item.horario)}</Badge>
                       <div className="flex items-center space-x-2">
                         <div 
                           className="w-3 h-3 rounded-full"

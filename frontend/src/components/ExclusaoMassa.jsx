@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useFuncionarios, useAgenda } from '../hooks/useApi'
 import supabaseService from '../services/supabase'
+import { formatarHorarioIntervalo } from '../utils/timeUtils'
 
 export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
@@ -292,7 +293,7 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            <span>{agendamento.horario}</span>
+                            <span>{formatarHorarioIntervalo(agendamento.horario)}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-xs bg-gray-100 px-2 py-1 rounded">

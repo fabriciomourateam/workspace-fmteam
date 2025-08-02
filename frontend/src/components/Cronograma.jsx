@@ -10,6 +10,7 @@ import { ErrorMessage } from './ui/error'
 // import { useNotifications } from '../contexts/NotificationContext'
 import AgendamentoForm from './forms/AgendamentoForm'
 import supabaseService from '../services/supabase'
+import { formatarHorarioIntervalo } from '../utils/timeUtils'
 
 const categoriasCores = {
   'gestao': 'bg-blue-500',
@@ -288,7 +289,7 @@ function Cronograma() {
               {horarios.map(horario => (
                 <div key={horario} className="space-y-2">
                   <div className="text-xs font-medium text-gray-600 text-center">
-                    {horario}
+                    {formatarHorarioIntervalo(horario)}
                   </div>
                   <TarefaCard 
                     tarefa={funcionario.tarefas[horario]} 
@@ -321,8 +322,8 @@ function Cronograma() {
                   Funcionário
                 </th>
                 {horarios.map(horario => (
-                  <th key={horario} className="border border-gray-200 p-3 bg-gray-50 text-center font-medium min-w-[120px]">
-                    {horario}
+                  <th key={horario} className="border border-gray-200 p-3 bg-gray-50 text-center font-medium min-w-[140px]">
+                    {formatarHorarioIntervalo(horario)}
                   </th>
                 ))}
               </tr>

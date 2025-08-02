@@ -18,6 +18,7 @@ import {
   Trash2
 } from 'lucide-react'
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
+import { formatarHorarioIntervalo } from '../utils/timeUtils'
 import AgendamentoForm from './forms/AgendamentoForm'
 import supabaseService from '../services/supabase'
 
@@ -192,7 +193,7 @@ export default function CalendarioAgendamentos() {
   }
 
   const handleDeleteAgendamento = async (agendamento) => {
-    if (!window.confirm(`Tem certeza que deseja excluir o agendamento de "${agendamento.tarefaInfo?.nome}" às ${agendamento.horario}?`)) {
+    if (!window.confirm(`Tem certeza que deseja excluir o agendamento de "${agendamento.tarefaInfo?.nome}" às ${formatarHorarioIntervalo(agendamento.horario)}?`)) {
       return
     }
 
@@ -526,7 +527,7 @@ export default function CalendarioAgendamentos() {
                                 </button>
 
                                 <div className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
-                                  {agendamento.horario}
+                                  {formatarHorarioIntervalo(agendamento.horario)}
                                 </div>
                                 <div>
                                   <div className={`font-medium ${agendamento.status === 'concluida' ? 'line-through text-gray-500' : ''}`}>

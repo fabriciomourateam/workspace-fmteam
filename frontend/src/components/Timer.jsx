@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Clock, CheckCircle, AlertTriangle } from 'lucide-react'
 import supabaseService from '../services/supabase'
+import { formatarHorarioIntervalo } from '../utils/timeUtils'
 
 const statusConfig = {
   'nao_iniciada': { 
@@ -56,7 +57,7 @@ export default function Timer({ agendamento, tarefa, funcionario, onUpdate }) {
           </Badge>
         </div>
         <div className="text-sm text-gray-600">
-          {funcionario?.nome} • {agendamento?.horario} • {tempoEstimado}min estimado
+          {funcionario?.nome} • {formatarHorarioIntervalo(agendamento?.horario)} • {tempoEstimado}min estimado
         </div>
       </CardHeader>
       
