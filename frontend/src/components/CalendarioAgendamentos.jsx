@@ -12,7 +12,9 @@ import {
   ChevronLeft, 
   ChevronRight,
   Eye,
-  EyeOff
+  EyeOff,
+  Edit,
+  Trash2
 } from 'lucide-react'
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import AgendamentoForm from './forms/AgendamentoForm'
@@ -185,6 +187,21 @@ export default function CalendarioAgendamentos() {
     } catch (error) {
       console.error('Erro ao salvar agendamento:', error)
       showError('Erro ao salvar agendamento: ' + error.message)
+    }
+  }
+
+  const handleDeleteAgendamento = async (agendamento) => {
+    if (!window.confirm(`Tem certeza que deseja excluir o agendamento de "${agendamento.tarefaInfo?.nome}" às ${agendamento.horario}?`)) {
+      return
+    }
+
+    try {
+      await supabaseService.deleteAgendamento(agendamento.id)
+      refetchAgenda()
+      showSuccess('Agendamento excluído com sucesso!')
+    } catch (error) {
+      console.error('Erro ao excluir agendamento:', error)
+      showError('Erro ao excluir agendamento: ' + error.message)
     }
   }
 
@@ -457,14 +474,47 @@ export default function CalendarioAgendamentos() {
                           .map((agendamento) => (
                             <div 
                               key={agendamento.id}
-                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                              className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors ${
+                                agendamento.status === 'concluida' ? 'bg-green-50 border-green-200' : ''
+                              }`}
                             >
                               <div className="flex items-center gap-3">
+                                {/* Checkbox */}
+                                <button
+                                  className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
+                                    agendamento.status === 'concluida'
+                                      ? 'bg-green-500 border-green-500 text-white' 
+                                      : 'border-gray-300 hover:border-green-400 hover:bg-green-50'
+                                  }`}
+                                  onClick={async (e) => {
+                                    e.stopPropagation()
+                                    try {
+                                      const novoStatus = agendamento.status === 'concluida' ? 'nao_iniciada' : 'concluida'
+                                      const agora = new Date()
+                                      
+                                      await supabaseService.updateAgendamento(agendamento.id, {
+                                        status: novoStatus,
+                                        tempo_fim: novoStatus === 'concluida' ? agora.toISOString() : null,
+                                        tempo_real: novoStatus === 'concluida' ? (agendamento.tarefaInfo?.tempo_estimado || 30) : null
+                                      })
+                                      
+                                      refetchAgenda()
+                                    } catch (error) {
+                                      console.error('Erro ao atualizar tarefa:', error)
+                                    }
+                                  }}
+                                  title={agendamento.status === 'concluida' ? 'Marcar como pendente' : 'Marcar como concluída'}
+                                >
+                                  {agendamento.status === 'concluida' && <span className="text-sm">✓</span>}
+                                </button>
+
                                 <div className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
                                   {agendamento.horario}
                                 </div>
                                 <div>
-                                  <div className="font-medium">{agendamento.tarefaInfo?.nome}</div>
+                                  <div className={`font-medium ${agendamento.status === 'concluida' ? 'line-through text-gray-500' : ''}`}>
+                                    {agendamento.tarefaInfo?.nome}
+                                  </div>
                                   <div className="text-sm text-gray-500">
                                     {agendamento.tarefaInfo?.categoria} • {agendamento.tarefaInfo?.tempo_estimado || 30}min
                                   </div>
@@ -474,15 +524,9 @@ export default function CalendarioAgendamentos() {
                               <div className="flex items-center gap-2">
                                 <Badge 
                                   variant={agendamento.status === 'concluida' ? 'default' : 'outline'}
-                                  className={
-                                    agendamento.status === 'concluida' ? 'bg-green-500' :
-                                    agendamento.status === 'em_andamento' ? 'bg-blue-500' :
-                                    agendamento.status === 'atrasada' ? 'bg-red-500' : ''
-                                  }
+                                  className={agendamento.status === 'concluida' ? 'bg-green-500' : ''}
                                 >
-                                  {agendamento.status === 'concluida' ? 'Concluída' :
-                                   agendamento.status === 'em_andamento' ? 'Em Andamento' :
-                                   agendamento.status === 'atrasada' ? 'Atrasada' : 'Não Iniciada'}
+                                  {agendamento.status === 'concluida' ? 'Concluída' : 'Pendente'}
                                 </Badge>
                                 
                                 <Button
@@ -493,8 +537,23 @@ export default function CalendarioAgendamentos() {
                                     setDetalheDiaOpen(false)
                                     setAgendamentoFormOpen(true)
                                   }}
+                                  className="flex items-center gap-1"
                                 >
+                                  <Edit className="w-4 h-4" />
                                   Editar
+                                </Button>
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteAgendamento(agendamento)
+                                  }}
+                                  className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  Excluir
                                 </Button>
                               </div>
                             </div>

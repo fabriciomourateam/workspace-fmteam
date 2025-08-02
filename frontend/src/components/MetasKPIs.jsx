@@ -15,7 +15,9 @@ import {
   Clock,
   CheckCircle,
   Award,
-  AlertCircle
+  AlertCircle,
+  Trash2,
+  MoreVertical
 } from 'lucide-react'
 import { useFuncionarios } from '../hooks/useApi'
 import supabaseService from '../services/supabase'
@@ -117,6 +119,24 @@ export default function MetasKPIs() {
       carregarMetas()
     } catch (error) {
       console.error('Erro ao criar meta:', error)
+    }
+  }
+
+  const excluirMeta = async (meta) => {
+    const funcionario = funcionarios?.find(f => f.id === meta.funcionario_id)
+    const tipoMeta = meta.tipo === 'diaria' ? 'diária' : meta.tipo === 'semanal' ? 'semanal' : 'mensal'
+    
+    if (!window.confirm(`Tem certeza que deseja excluir a meta ${tipoMeta} de ${funcionario?.nome}?\n\nData: ${new Date(meta.periodo).toLocaleDateString('pt-BR')}\nMeta: ${Math.round(meta.meta_horas / 60)}h e ${meta.meta_tarefas} tarefas`)) {
+      return
+    }
+
+    try {
+      await supabaseService.deleteMeta(meta.id)
+      carregarMetas()
+      alert('Meta excluída com sucesso!')
+    } catch (error) {
+      console.error('Erro ao excluir meta:', error)
+      alert('Erro ao excluir meta: ' + error.message)
     }
   }
 
@@ -294,10 +314,23 @@ export default function MetasKPIs() {
                         </CardDescription>
                       </div>
                     </div>
-                    <Badge className={`${cor} text-white`}>
-                      <StatusIcon className="w-4 h-4 mr-1" />
-                      {status.replace('_', ' ')}
-                    </Badge>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge className={`${cor} text-white`}>
+                        <StatusIcon className="w-4 h-4 mr-1" />
+                        {status.replace('_', ' ')}
+                      </Badge>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => excluirMeta(meta)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
+                        title="Excluir meta"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 

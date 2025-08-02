@@ -134,6 +134,74 @@ class SupabaseService {
     if (error) throw error
   }
 
+  // Exclusão em massa de agendamentos
+  async deleteMultipleAgendamentos(ids) {
+    const { error } = await supabase
+      .from('agenda')
+      .delete()
+      .in('id', ids)
+
+    if (error) throw error
+    return { deleted: ids.length }
+  }
+
+  // Exclusão por filtros
+  async deleteAgendamentosByFilter(filters) {
+    let query = supabase.from('agenda').delete()
+    
+    if (filters.funcionario_id && filters.funcionario_id !== 'todos') {
+      query = query.eq('funcionario_id', filters.funcionario_id)
+    }
+    if (filters.data) {
+      query = query.eq('data', filters.data)
+    }
+    if (filters.status && filters.status !== 'todos') {
+      query = query.eq('status', filters.status)
+    }
+    if (filters.data_inicio && filters.data_fim) {
+      query = query.gte('data', filters.data_inicio).lte('data', filters.data_fim)
+    }
+
+    const { error, count } = await query
+
+    if (error) throw error
+    return { deleted: count }
+  }
+
+  // Exclusão em massa de agendamentos
+  async deleteMultipleAgendamentos(ids) {
+    const { error } = await supabase
+      .from('agenda')
+      .delete()
+      .in('id', ids)
+
+    if (error) throw error
+    return { deleted: ids.length }
+  }
+
+  // Exclusão por filtros
+  async deleteAgendamentosByFilter(filters) {
+    let query = supabase.from('agenda').delete()
+    
+    if (filters.funcionario_id) {
+      query = query.eq('funcionario_id', filters.funcionario_id)
+    }
+    if (filters.data) {
+      query = query.eq('data', filters.data)
+    }
+    if (filters.status) {
+      query = query.eq('status', filters.status)
+    }
+    if (filters.data_inicio && filters.data_fim) {
+      query = query.gte('data', filters.data_inicio).lte('data', filters.data_fim)
+    }
+
+    const { error, count } = await query
+
+    if (error) throw error
+    return { deleted: count }
+  }
+
   // Agenda por funcionário
   async getAgendaFuncionario(funcionarioId) {
     const { data, error } = await supabase
@@ -158,7 +226,7 @@ class SupabaseService {
       .eq('horario', horario)
       .eq('funcionario_id', funcionarioId)
       .single()
-    
+
     if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
     return data
   }
@@ -170,15 +238,129 @@ class SupabaseService {
       .select('id')
       .eq('horario', horario)
       .eq('funcionario_id', funcionarioId)
-    
+
     if (excludeId) {
       query = query.neq('id', excludeId)
     }
-    
+
     const { data, error } = await query
-    
+
     if (error) throw error
     return data && data.length > 0
+  }
+  // Metas
+  async getMetas(funcionarioId = null, tipo = null) {
+    let query = supabase
+      .from('metas')
+      .select(`
+        *,
+        funcionario:funcionarios(nome, cor)
+      `)
+      .order('periodo', { ascending: false })
+
+    if (funcionarioId) {
+      query = query.eq('funcionario_id', funcionarioId)
+    }
+    
+    if (tipo) {
+      query = query.eq('tipo', tipo)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    return data
+  }
+
+  async createMeta(meta) {
+    const { data, error } = await supabase
+      .from('metas')
+      .insert([meta])
+      .select()
+
+    if (error) throw error
+    return data[0]
+  }
+
+  async updateMeta(id, updates) {
+    const { data, error } = await supabase
+      .from('metas')
+      .update(updates)
+      .eq('id', id)
+      .select()
+
+    if (error) throw error
+    return data[0]
+  }
+
+  async deleteMeta(id) {
+    const { error } = await supabase
+      .from('metas')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+  }
+
+  // Estatísticas avançadas
+  async getEstatisticasAvancadas(funcionarioId = null, dataInicio = null, dataFim = null) {
+    let query = supabase
+      .from('agenda')
+      .select(`
+        *,
+        funcionario:funcionarios(nome, cor),
+        tarefa:tarefas(nome, categoria, tempo_estimado)
+      `)
+
+    if (funcionarioId) {
+      query = query.eq('funcionario_id', funcionarioId)
+    }
+    
+    if (dataInicio) {
+      query = query.gte('data', dataInicio)
+    }
+    
+    if (dataFim) {
+      query = query.lte('data', dataFim)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    
+    // Processar estatísticas
+    const stats = {
+      totalTarefas: data.length,
+      tarefasConcluidas: data.filter(t => t.status === 'concluida').length,
+      tarefasAtrasadas: data.filter(t => t.status === 'atrasada').length,
+      tempoTotalEstimado: data.reduce((acc, t) => acc + (t.tarefa?.tempo_estimado || 0), 0),
+      tempoTotalReal: data.reduce((acc, t) => acc + (t.tempo_real || 0), 0),
+      eficienciaMedia: 0,
+      tarefasPorStatus: {
+        'nao_iniciada': data.filter(t => t.status === 'nao_iniciada').length,
+        'em_andamento': data.filter(t => t.status === 'em_andamento').length,
+        'concluida': data.filter(t => t.status === 'concluida').length,
+        'atrasada': data.filter(t => t.status === 'atrasada').length
+      }
+    }
+    
+    // Calcular eficiência média
+    const tarefasComTempo = data.filter(t => t.tempo_real && t.tarefa?.tempo_estimado)
+    if (tarefasComTempo.length > 0) {
+      const eficiencias = tarefasComTempo.map(t => (t.tarefa.tempo_estimado / t.tempo_real) * 100)
+      stats.eficienciaMedia = eficiencias.reduce((acc, eff) => acc + eff, 0) / eficiencias.length
+    }
+    
+    return { data, stats }
+  }
+
+  // Health check
+  async healthCheck() {
+    const { data, error } = await supabase
+      .from('funcionarios')
+      .select('count')
+      .limit(1)
+
+    if (error) throw error
+    return { status: 'ok', message: 'Supabase conectado' }
   }
 }
 

@@ -194,17 +194,54 @@ function Cronograma() {
 
     const categoria = tarefa.tarefaInfo?.categoria || 'interno'
     const corCategoria = categoriasCores[categoria] || 'bg-gray-500'
+    const isCompleted = tarefa.status === 'concluida'
+
+    const toggleTarefa = async (e) => {
+      e.stopPropagation()
+      try {
+        const novoStatus = isCompleted ? 'nao_iniciada' : 'concluida'
+        const agora = new Date()
+        
+        await supabaseService.updateAgendamento(tarefa.id, {
+          status: novoStatus,
+          tempo_fim: novoStatus === 'concluida' ? agora.toISOString() : null,
+          tempo_real: novoStatus === 'concluida' ? (tarefa.tarefaInfo?.tempo_estimado || 30) : null
+        })
+        
+        refetchAgenda()
+      } catch (error) {
+        console.error('Erro ao atualizar tarefa:', error)
+      }
+    }
 
     return (
       <div 
-        className={`h-16 ${corCategoria} rounded-lg p-3 text-white shadow-sm hover:shadow-md transition-shadow cursor-pointer group relative`}
+        className={`h-16 ${corCategoria} rounded-lg p-2 text-white shadow-sm hover:shadow-md transition-all cursor-pointer group relative ${
+          isCompleted ? 'opacity-75 ring-2 ring-green-400' : ''
+        }`}
         onClick={() => handleEditAgendamento(tarefa)}
       >
-        <div className="text-sm font-medium truncate">
-          {tarefa.tarefaInfo?.nome || tarefa.tarefa}
-        </div>
-        <div className="text-xs opacity-90">
-          30 min
+        {/* Checkbox */}
+        <button
+          className={`absolute top-1 left-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+            isCompleted 
+              ? 'bg-green-500 border-green-500 text-white' 
+              : 'border-white/50 hover:border-white hover:bg-white/20'
+          }`}
+          onClick={toggleTarefa}
+          title={isCompleted ? 'Marcar como pendente' : 'Marcar como concluída'}
+        >
+          {isCompleted && <span className="text-xs">✓</span>}
+        </button>
+
+        {/* Conteúdo da tarefa */}
+        <div className="ml-6">
+          <div className={`text-sm font-medium truncate ${isCompleted ? 'line-through' : ''}`}>
+            {tarefa.tarefaInfo?.nome || tarefa.tarefa}
+          </div>
+          <div className="text-xs opacity-90">
+            {tarefa.tarefaInfo?.tempo_estimado || 30} min
+          </div>
         </div>
         
         {/* Botão de deletar */}

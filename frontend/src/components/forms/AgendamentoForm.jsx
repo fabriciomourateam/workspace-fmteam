@@ -34,13 +34,13 @@ export default function AgendamentoForm({
   const [dataFim, setDataFim] = useState('')
 
   const diasSemana = [
+    { id: 0, nome: 'Domingo', abrev: 'Dom' },
     { id: 1, nome: 'Segunda', abrev: 'Seg' },
     { id: 2, nome: 'Terça', abrev: 'Ter' },
     { id: 3, nome: 'Quarta', abrev: 'Qua' },
     { id: 4, nome: 'Quinta', abrev: 'Qui' },
     { id: 5, nome: 'Sexta', abrev: 'Sex' },
-    { id: 6, nome: 'Sábado', abrev: 'Sáb' },
-    { id: 0, nome: 'Domingo', abrev: 'Dom' }
+    { id: 6, nome: 'Sábado', abrev: 'Sáb' }
   ]
 
   // Gerar horários de 30 em 30 minutos
@@ -56,15 +56,28 @@ export default function AgendamentoForm({
   // Função para gerar datas recorrentes
   const gerarDatasRecorrentes = (dataInicio, dataFim, diasSemana) => {
     const datas = []
-    const inicio = new Date(dataInicio)
-    const fim = new Date(dataFim)
+    // Usar Date com formato específico para evitar problemas de timezone
+    const inicio = new Date(dataInicio + 'T00:00:00')
+    const fim = new Date(dataFim + 'T00:00:00')
+    
+    console.log('=== DEBUG DATAS RECORRENTES ===')
+    console.log('Data início:', dataInicio, '→', inicio)
+    console.log('Data fim:', dataFim, '→', fim)
+    console.log('Dias selecionados:', diasSemana)
     
     for (let data = new Date(inicio); data <= fim; data.setDate(data.getDate() + 1)) {
       const diaSemana = data.getDay()
+      const dataStr = data.toISOString().split('T')[0]
+      
+      console.log(`Data: ${dataStr}, Dia da semana: ${diaSemana}, Incluir: ${diasSemana.includes(diaSemana)}`)
+      
       if (diasSemana.includes(diaSemana)) {
-        datas.push(new Date(data).toISOString().split('T')[0])
+        datas.push(dataStr)
       }
     }
+    
+    console.log('Datas geradas:', datas)
+    console.log('=== FIM DEBUG ===')
     
     return datas
   }
@@ -138,7 +151,7 @@ export default function AgendamentoForm({
   }
 
   const selecionarDiasUteis = () => {
-    setDiasSelecionados([1, 2, 3, 4, 5]) // Segunda a Sexta
+    setDiasSelecionados([1, 2, 3, 4, 5]) // Segunda a Sexta (IDs corretos)
   }
 
   return (

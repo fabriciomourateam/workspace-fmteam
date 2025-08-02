@@ -1,129 +1,47 @@
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Play, Pause, Square, Clock, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Clock, CheckCircle, AlertTriangle } from 'lucide-react'
 import supabaseService from '../services/supabase'
 
 const statusConfig = {
   'nao_iniciada': { 
-    label: 'Não Iniciada', 
+    label: 'Pendente', 
     color: 'bg-gray-500', 
     icon: Clock 
-  },
-  'em_andamento': { 
-    label: 'Em Andamento', 
-    color: 'bg-blue-500', 
-    icon: Play 
   },
   'concluida': { 
     label: 'Concluída', 
     color: 'bg-green-500', 
     icon: CheckCircle 
-  },
-  'atrasada': { 
-    label: 'Atrasada', 
-    color: 'bg-red-500', 
-    icon: AlertTriangle 
   }
 }
 
 export default function Timer({ agendamento, tarefa, funcionario, onUpdate }) {
   const [status, setStatus] = useState(agendamento?.status || 'nao_iniciada')
-  const [tempoDecorrido, setTempoDecorrido] = useState(0)
-  const [isRunning, setIsRunning] = useState(false)
-  const [tempoInicio, setTempoInicio] = useState(agendamento?.tempo_inicio ? new Date(agendamento.tempo_inicio) : null)
+  const [isChecked, setIsChecked] = useState(agendamento?.status === 'concluida')
 
-  // Calcular tempo decorrido se já iniciou
-  useEffect(() => {
-    if (tempoInicio && status === 'em_andamento') {
-      const agora = new Date()
-      const diferenca = Math.floor((agora - tempoInicio) / 1000 / 60) // em minutos
-      setTempoDecorrido(diferenca)
-      setIsRunning(true)
-    }
-  }, [tempoInicio, status])
-
-  // Timer em tempo real
-  useEffect(() => {
-    let interval = null
-    if (isRunning && status === 'em_andamento') {
-      interval = setInterval(() => {
-        setTempoDecorrido(prev => prev + 1)
-      }, 60000) // atualiza a cada minuto
-    }
-    return () => clearInterval(interval)
-  }, [isRunning, status])
-
-  const formatarTempo = (minutos) => {
-    const horas = Math.floor(minutos / 60)
-    const mins = minutos % 60
-    return `${horas}h ${mins}m`
-  }
-
-  const iniciarTarefa = async () => {
+  const toggleTarefa = async () => {
     try {
+      const novoStatus = isChecked ? 'nao_iniciada' : 'concluida'
       const agora = new Date()
+      
       await supabaseService.updateAgendamento(agendamento.id, {
-        status: 'em_andamento',
-        tempo_inicio: agora.toISOString()
+        status: novoStatus,
+        tempo_fim: novoStatus === 'concluida' ? agora.toISOString() : null,
+        tempo_real: novoStatus === 'concluida' ? (tarefa?.tempo_estimado || 30) : null
       })
       
-      setStatus('em_andamento')
-      setTempoInicio(agora)
-      setIsRunning(true)
-      setTempoDecorrido(0)
+      setStatus(novoStatus)
+      setIsChecked(!isChecked)
       onUpdate?.()
     } catch (error) {
-      console.error('Erro ao iniciar tarefa:', error)
-    }
-  }
-
-  const pausarTarefa = async () => {
-    try {
-      await supabaseService.updateAgendamento(agendamento.id, {
-        status: 'nao_iniciada',
-        tempo_inicio: null
-      })
-      
-      setStatus('nao_iniciada')
-      setIsRunning(false)
-      setTempoDecorrido(0)
-      setTempoInicio(null)
-      onUpdate?.()
-    } catch (error) {
-      console.error('Erro ao pausar tarefa:', error)
-    }
-  }
-
-  const concluirTarefa = async () => {
-    try {
-      const agora = new Date()
-      await supabaseService.updateAgendamento(agendamento.id, {
-        status: 'concluida',
-        tempo_fim: agora.toISOString(),
-        tempo_real: tempoDecorrido
-      })
-      
-      setStatus('concluida')
-      setIsRunning(false)
-      onUpdate?.()
-    } catch (error) {
-      console.error('Erro ao concluir tarefa:', error)
+      console.error('Erro ao atualizar tarefa:', error)
     }
   }
 
   const tempoEstimado = tarefa?.tempo_estimado || 30
-  const isAtrasada = tempoDecorrido > tempoEstimado && status === 'em_andamento'
   const StatusIcon = statusConfig[status]?.icon || Clock
-
-  // Atualizar status para atrasada se necessário
-  useEffect(() => {
-    if (isAtrasada && status === 'em_andamento') {
-      setStatus('atrasada')
-      supabaseService.updateAgendamento(agendamento.id, { status: 'atrasada' })
-    }
-  }, [isAtrasada, status, agendamento.id])
 
   return (
     <Card className="w-full">
@@ -138,74 +56,75 @@ export default function Timer({ agendamento, tarefa, funcionario, onUpdate }) {
           </Badge>
         </div>
         <div className="text-sm text-gray-600">
-          {funcionario?.nome} • {agendamento?.horario} • {formatarTempo(tempoEstimado)} estimado
+          {funcionario?.nome} • {agendamento?.horario} • {tempoEstimado}min estimado
         </div>
       </CardHeader>
       
       <CardContent>
-        <div className="space-y-4">
-          {/* Display do tempo */}
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">
-              {formatarTempo(tempoDecorrido)}
-            </div>
-            <div className="text-sm text-gray-500">
-              {status === 'concluida' ? 'Tempo total gasto' : 'Tempo decorrido'}
-            </div>
-            {tempoDecorrido > 0 && (
-              <div className="text-xs mt-1">
-                <span className={tempoDecorrido > tempoEstimado ? 'text-red-500' : 'text-green-500'}>
-                  {tempoDecorrido > tempoEstimado ? '+' : ''}{tempoDecorrido - tempoEstimado}m do estimado
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Barra de progresso */}
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className={`h-2 rounded-full transition-all duration-300 ${
-                tempoDecorrido > tempoEstimado ? 'bg-red-500' : 'bg-blue-500'
+        <div className="space-y-6">
+          {/* Checkbox Principal */}
+          <div className="flex items-center justify-center">
+            <button
+              onClick={toggleTarefa}
+              className={`flex items-center justify-center w-20 h-20 rounded-full border-4 transition-all duration-300 hover:scale-105 ${
+                isChecked 
+                  ? 'bg-green-500 border-green-500 text-white shadow-lg' 
+                  : 'bg-white border-gray-300 text-gray-400 hover:border-green-400'
               }`}
-              style={{ 
-                width: `${Math.min((tempoDecorrido / tempoEstimado) * 100, 100)}%` 
-              }}
-            />
+            >
+              {isChecked ? (
+                <CheckCircle className="w-10 h-10" />
+              ) : (
+                <div className="w-10 h-10 rounded-full border-2 border-current" />
+              )}
+            </button>
           </div>
 
-          {/* Controles */}
-          <div className="flex gap-2 justify-center">
-            {status === 'nao_iniciada' && (
-              <Button onClick={iniciarTarefa} className="flex items-center gap-2">
-                <Play className="w-4 h-4" />
-                Iniciar
-              </Button>
-            )}
+          {/* Status e Ação */}
+          <div className="text-center">
+            <div className={`text-xl font-semibold ${isChecked ? 'text-green-600' : 'text-gray-600'}`}>
+              {isChecked ? '✓ Tarefa Concluída' : 'Clique para marcar como concluída'}
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              {isChecked ? 'Parabéns! Tarefa finalizada.' : 'Marque quando terminar esta tarefa'}
+            </div>
+          </div>
+
+          {/* Informações da Tarefa */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Categoria:</span>
+                <div className="text-gray-600">{tarefa?.categoria || 'Geral'}</div>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Tempo Estimado:</span>
+                <div className="text-gray-600">{tempoEstimado} minutos</div>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Prioridade:</span>
+                <div className={`capitalize ${
+                  tarefa?.prioridade === 'alta' ? 'text-red-600' :
+                  tarefa?.prioridade === 'media' ? 'text-yellow-600' : 'text-green-600'
+                }`}>
+                  {tarefa?.prioridade || 'Normal'}
+                </div>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Status:</span>
+                <div className={`${
+                  status === 'concluida' ? 'text-green-600' : 'text-gray-600'
+                }`}>
+                  {statusConfig[status]?.label}
+                </div>
+              </div>
+            </div>
             
-            {status === 'em_andamento' && (
-              <>
-                <Button variant="outline" onClick={pausarTarefa} className="flex items-center gap-2">
-                  <Pause className="w-4 h-4" />
-                  Pausar
-                </Button>
-                <Button onClick={concluirTarefa} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
-                  <CheckCircle className="w-4 h-4" />
-                  Concluir
-                </Button>
-              </>
-            )}
-            
-            {status === 'atrasada' && (
-              <Button onClick={concluirTarefa} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
-                <CheckCircle className="w-4 h-4" />
-                Concluir
-              </Button>
-            )}
-            
-            {status === 'concluida' && (
-              <Badge className="bg-green-500 text-white px-4 py-2">
-                ✓ Tarefa Concluída
-              </Badge>
+            {tarefa?.descricao && (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <span className="font-medium text-gray-700">Descrição:</span>
+                <div className="text-gray-600 text-sm mt-1">{tarefa.descricao}</div>
+              </div>
             )}
           </div>
         </div>
