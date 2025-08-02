@@ -352,6 +352,64 @@ class SupabaseService {
     return { data, stats }
   }
 
+  // Processos
+  async getProcessos() {
+    const { data, error } = await supabase
+      .from('processos')
+      .select(`
+        *,
+        tarefa:tarefas(nome, categoria)
+      `)
+      .order('titulo')
+
+    if (error) throw error
+    return data
+  }
+
+  async getProcesso(tarefaId) {
+    const { data, error } = await supabase
+      .from('processos')
+      .select(`
+        *,
+        tarefa:tarefas(nome, categoria)
+      `)
+      .eq('tarefa_id', tarefaId)
+      .single()
+
+    if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
+    return data
+  }
+
+  async createProcesso(processo) {
+    const { data, error } = await supabase
+      .from('processos')
+      .insert([processo])
+      .select()
+
+    if (error) throw error
+    return data[0]
+  }
+
+  async updateProcesso(id, updates) {
+    const { data, error } = await supabase
+      .from('processos')
+      .update(updates)
+      .eq('id', id)
+      .select()
+
+    if (error) throw error
+    return data[0]
+  }
+
+  async deleteProcesso(id) {
+    const { error } = await supabase
+      .from('processos')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+  }
+
   // Health check
   async healthCheck() {
     const { data, error } = await supabase

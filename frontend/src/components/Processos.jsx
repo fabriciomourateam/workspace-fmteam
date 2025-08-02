@@ -1,14 +1,160 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Clock, FileText, CheckCircle, AlertCircle, Play, Users, Target } from 'lucide-react'
-import agendaData from '../data/agenda.json'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Clock, FileText, CheckCircle, AlertCircle, Play, Users, Target, Edit, Plus, Trash2 } from 'lucide-react'
+import { useTarefas } from '../hooks/useApi'
+import ProcessoForm from './forms/ProcessoForm'
+import supabaseService from '../services/supabase'
 import processosData from '../data/processos.json'
 
 function Processos() {
   const [processoSelecionado, setProcessoSelecionado] = useState(null)
+  const [processos, setProcessos] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [processoFormOpen, setProcessoFormOpen] = useState(false)
+  const [editingProcesso, setEditingProcesso] = useState(null)
+  const [editingTarefaId, setEditingTarefaId] = useState(null)
+  const [editingTarefaNome, setEditingTarefaNome] = useState('')
+
+  const { data: tarefas } = useTarefas()
+
+  // Carregar processos
+  useEffect(() => {
+    carregarProcessos()
+  }, [])
+
+  const carregarProcessos = async () => {
+    setLoading(true)
+    try {
+      // Carregar processos do Supabase
+      const processosSupabase = await supabaseService.getProcessos()
+      
+      // Criar mapa de processos do Supabase por tarefa_id
+      const processosMap = {}
+      processosSupabase.forEach(processo => {
+        processosMap[processo.tarefa_id] = processo
+      })
+      
+      // Combinar com dados do JSON (usar Supabase se existir, senão usar JSON)
+      const processosCombinados = []
+      
+      // Para cada processo no JSON, verificar se existe versão editada no Supabase
+      Object.keys(processosData).forEach(tarefaId => {
+        const processoJson = processosData[tarefaId]
+        const processoSupabase = processosMap[tarefaId]
+        
+        if (processoSupabase) {
+          // Usar versão do Supabase (editada)
+          processosCombinados.push({
+            ...processoSupabase,
+            isEdited: true
+          })
+        } else {
+          // Usar versão do JSON (original)
+          processosCombinados.push({
+            tarefa_id: tarefaId,
+            titulo: processoJson.titulo,
+            descricao: processoJson.descricao,
+            tempo_estimado: processoJson.tempoEstimado,
+            frequencia: processoJson.frequencia,
+            passos: processoJson.passos,
+            observacoes: processoJson.observacoes,
+            isEdited: false,
+            isFromJson: true
+          })
+        }
+      })
+      
+      // Adicionar processos que existem apenas no Supabase (novos)
+      processosSupabase.forEach(processo => {
+        if (!processosData[processo.tarefa_id]) {
+          processosCombinados.push({
+            ...processo,
+            isEdited: true,
+            isNew: true
+          })
+        }
+      })
+      
+      setProcessos(processosCombinados)
+    } catch (error) {
+      console.error('Erro ao carregar processos:', error)
+      // Em caso de erro, usar apenas dados do JSON
+      const processosJson = Object.keys(processosData).map(tarefaId => ({
+        tarefa_id: tarefaId,
+        titulo: processosData[tarefaId].titulo,
+        descricao: processosData[tarefaId].descricao,
+        tempo_estimado: processosData[tarefaId].tempoEstimado,
+        frequencia: processosData[tarefaId].frequencia,
+        passos: processosData[tarefaId].passos,
+        observacoes: processosData[tarefaId].observacoes,
+        isEdited: false,
+        isFromJson: true
+      }))
+      setProcessos(processosJson)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveProcesso = async (processoData) => {
+    try {
+      if (editingProcesso && editingProcesso.id) {
+        // Atualizar processo existente no Supabase
+        await supabaseService.updateProcesso(editingProcesso.id, processoData)
+      } else {
+        // Criar novo processo no Supabase (pode ser uma edição de um processo do JSON)
+        await supabaseService.createProcesso(processoData)
+      }
+      
+      carregarProcessos()
+      setProcessoFormOpen(false)
+      setEditingProcesso(null)
+      alert('Processo salvo com sucesso!')
+    } catch (error) {
+      console.error('Erro ao salvar processo:', error)
+      throw error
+    }
+  }
+
+  const handleDeleteProcesso = async (processo) => {
+    if (processo.isFromJson && !processo.id) {
+      alert('Este é um processo padrão e não pode ser excluído. Você pode editá-lo para criar uma versão personalizada.')
+      return
+    }
+
+    if (!window.confirm(`Tem certeza que deseja excluir o processo "${processo.titulo}"?`)) {
+      return
+    }
+
+    try {
+      await supabaseService.deleteProcesso(processo.id)
+      carregarProcessos()
+      alert('Processo excluído com sucesso!')
+    } catch (error) {
+      console.error('Erro ao excluir processo:', error)
+      alert('Erro ao excluir processo: ' + error.message)
+    }
+  }
+
+  const handleEditProcesso = (processo) => {
+    setEditingProcesso(processo)
+    setEditingTarefaId(processo.tarefa_id)
+    
+    // Buscar nome da tarefa
+    const tarefa = tarefas?.find(t => t.id === processo.tarefa_id)
+    setEditingTarefaNome(tarefa?.nome || processo.tarefa?.nome || 'Tarefa')
+    setProcessoFormOpen(true)
+  }
+
+  const handleCreateProcesso = (tarefaId, tarefaNome) => {
+    setEditingProcesso(null)
+    setEditingTarefaId(tarefaId)
+    setEditingTarefaNome(tarefaNome)
+    setProcessoFormOpen(true)
+  }
 
   const ProcessoModal = ({ processo, isOpen, onClose }) => {
     if (!processo) return null
@@ -32,7 +178,7 @@ function Processos() {
               <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4 text-blue-600" />
                 <span className="text-sm">
-                  <strong>Tempo:</strong> {processo.tempoEstimado}
+                  <strong>Tempo:</strong> {processo.tempo_estimado}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
@@ -44,7 +190,7 @@ function Processos() {
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-4 h-4 text-purple-600" />
                 <span className="text-sm">
-                  <strong>Passos:</strong> {processo.passos.length}
+                  <strong>Passos:</strong> {processo.passos?.length || 0}
                 </span>
               </div>
             </div>
@@ -52,7 +198,7 @@ function Processos() {
             {/* Passos do processo */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Passos do Processo</h3>
-              {processo.passos.map((passo, index) => (
+              {(processo.passos || []).map((passo, index) => (
                 <Card key={index} className="border-l-4 border-l-blue-500">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -108,30 +254,9 @@ function Processos() {
     )
   }
 
-  const ProcessoCard = ({ tarefaId, tarefa }) => {
-    const processo = processosData[tarefaId]
+  const ProcessoCard = ({ tarefa }) => {
+    const processo = processos.find(p => p.tarefa_id === tarefa.id)
     
-    if (!processo) {
-      return (
-        <Card className="opacity-50">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <FileText className="w-5 h-5 text-gray-400" />
-              <span>{tarefa.nome}</span>
-            </CardTitle>
-            <CardDescription>
-              Processo em desenvolvimento
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-gray-500">
-              Documentação do processo ainda não disponível.
-            </div>
-          </CardContent>
-        </Card>
-      )
-    }
-
     const categoriasCores = {
       'gestao': 'border-blue-500',
       'atendimento': 'border-green-500',
@@ -144,17 +269,90 @@ function Processos() {
 
     const corBorda = categoriasCores[tarefa.categoria] || 'border-gray-500'
 
+    if (!processo) {
+      return (
+        <Card className={`hover:shadow-lg transition-shadow border-l-4 ${corBorda} border-dashed`}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-5 h-5 text-gray-400" />
+                <span>{tarefa.nome}</span>
+              </div>
+              <Badge variant="outline" className="capitalize">
+                {tarefa.categoria}
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Processo ainda não documentado
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="text-sm text-gray-500">
+                Clique para criar a documentação deste processo.
+              </div>
+              
+              <Button 
+                className="w-full" 
+                onClick={() => handleCreateProcesso(tarefa.id, tarefa.nome)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Criar Processo
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )
+    }
+
     return (
-      <Card className={`hover:shadow-lg transition-shadow cursor-pointer border-l-4 ${corBorda}`}>
-        <CardHeader>
+      <Card className={`hover:shadow-lg transition-shadow border-l-4 ${corBorda} group relative`}>
+        {/* Indicador de status */}
+        <div className="absolute top-2 right-2">
+          {processo.isEdited ? (
+            <Badge variant="default" className="text-xs bg-green-500">
+              {processo.isNew ? 'Novo' : 'Editado'}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-xs">
+              Original
+            </Badge>
+          )}
+        </div>
+
+        <CardHeader className="pr-20">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center space-x-2">
               <FileText className="w-5 h-5" />
               <span>{processo.titulo}</span>
             </CardTitle>
+          </div>
+          <div className="flex items-center justify-between">
             <Badge variant="outline" className="capitalize">
               {tarefa.categoria}
             </Badge>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleEditProcesso(processo)}
+                className="p-2"
+                title={processo.isFromJson ? 'Editar (criará versão personalizada)' : 'Editar processo'}
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+              {processo.id && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteProcesso(processo)}
+                  className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  title="Excluir processo"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <CardDescription>
             {processo.descricao}
@@ -166,11 +364,11 @@ function Processos() {
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-1">
                   <Clock className="w-4 h-4 text-blue-600" />
-                  <span>{processo.tempoEstimado}</span>
+                  <span>{processo.tempo_estimado}</span>
                 </div>
                 <div className="flex items-center space-x-1">
                   <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span>{processo.passos.length} passos</span>
+                  <span>{processo.passos?.length || 0} passos</span>
                 </div>
               </div>
               <Badge variant="secondary" className="text-xs">
@@ -178,14 +376,24 @@ function Processos() {
               </Badge>
             </div>
             
-            <Button 
-              className="w-full" 
-              variant="outline"
-              onClick={() => setProcessoSelecionado(processo)}
-            >
-              <Play className="w-4 h-4 mr-2" />
-              Ver Processo Detalhado
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                className="flex-1" 
+                variant="outline"
+                onClick={() => setProcessoSelecionado(processo)}
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Ver Detalhes
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => handleEditProcesso(processo)}
+                className="px-3"
+                title={processo.isFromJson ? 'Editar (criará versão personalizada)' : 'Editar processo'}
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -208,7 +416,7 @@ function Processos() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Object.keys(processosData).length}</div>
+            <div className="text-2xl font-bold">{processos.length}</div>
             <p className="text-xs text-muted-foreground">
               Processos documentados
             </p>
@@ -222,8 +430,8 @@ function Processos() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Object.values(processosData).reduce((total, processo) => {
-                const tempo = parseInt(processo.tempoEstimado.split(' ')[0])
+              {processos.reduce((total, processo) => {
+                const tempo = parseInt(processo.tempo_estimado?.split(' ')[0] || '0')
                 return total + tempo
               }, 0)} min
             </div>
@@ -240,8 +448,8 @@ function Processos() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Object.values(processosData).reduce((total, processo) => {
-                return total + processo.passos.length
+              {processos.reduce((total, processo) => {
+                return total + (processo.passos?.length || 0)
               }, 0)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -252,21 +460,42 @@ function Processos() {
       </div>
 
       {/* Lista de processos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {agendaData.tarefas.map(tarefa => (
-          <ProcessoCard 
-            key={tarefa.id} 
-            tarefaId={tarefa.id} 
-            tarefa={tarefa}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">Carregando processos...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {tarefas?.map(tarefa => (
+            <ProcessoCard 
+              key={tarefa.id} 
+              tarefa={tarefa}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Modal de processo */}
       <ProcessoModal 
         processo={processoSelecionado}
         isOpen={!!processoSelecionado}
         onClose={() => setProcessoSelecionado(null)}
+      />
+
+      {/* Modal de edição */}
+      <ProcessoForm
+        isOpen={processoFormOpen}
+        onClose={() => {
+          setProcessoFormOpen(false)
+          setEditingProcesso(null)
+        }}
+        processo={editingProcesso}
+        tarefaId={editingTarefaId}
+        tarefaNome={editingTarefaNome}
+        onSave={handleSaveProcesso}
       />
     </div>
   )
