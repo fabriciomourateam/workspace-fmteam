@@ -138,8 +138,6 @@ class DataService {
     if (this.isSupabaseEnabled) {
       try {
         const data = await supabaseService.getAgenda();
-        console.log('Agenda carregada do Supabase:', data.length);
-        console.log('Dados brutos da agenda:', data);
         
         // Transformar dados do Supabase para formato esperado
         const transformedData = data.map(item => ({
@@ -147,7 +145,7 @@ class DataService {
           horario: item.horario,
           funcionario: item.funcionario_id,
           tarefa: item.tarefa_id,
-          data: item.data, // IMPORTANTE: incluir o campo data
+          data: item.data,
           status: item.status || 'nao_iniciada',
           tempo_real: item.tempo_real || 0,
           tempo_inicio: item.tempo_inicio,
@@ -156,14 +154,12 @@ class DataService {
           tarefa_nome: item.tarefa?.nome
         }));
         
-        console.log('Dados transformados da agenda:', transformedData);
         return transformedData;
       } catch (error) {
         console.error('Erro no Supabase, usando fallback:', error);
       }
     }
     
-    console.log('Usando dados estáticos para agenda');
     return STATIC_DATA.agenda;
   }
 

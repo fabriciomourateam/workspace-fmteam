@@ -13,7 +13,8 @@ export default function AgendamentoForm({
   tarefas = [],
   onSave,
   horarioInicial = '',
-  funcionarioInicial = ''
+  funcionarioInicial = '',
+  dataInicial = ''
 }) {
   // const { showSuccess, showError } = useNotifications()
   const showSuccess = (message) => console.log('Sucesso:', message)
@@ -24,7 +25,7 @@ export default function AgendamentoForm({
     horario: agendamento?.horario || horarioInicial || '',
     funcionario_id: agendamento?.funcionario_id || funcionarioInicial || '',
     tarefa_id: agendamento?.tarefa_id || '',
-    data: agendamento?.data || new Date().toISOString().split('T')[0]
+    data: agendamento?.data || dataInicial || new Date().toISOString().split('T')[0]
   })
 
   const [tipoAgendamento, setTipoAgendamento] = useState('unico') // 'unico' ou 'recorrente'
@@ -77,9 +78,7 @@ export default function AgendamentoForm({
         throw new Error('Todos os campos são obrigatórios')
       }
 
-      console.log('=== DEBUG AGENDAMENTO FORM ===')
-      console.log('Dados do formulário:', formData)
-      console.log('Tipo de agendamento:', tipoAgendamento)
+
 
       if (tipoAgendamento === 'recorrente') {
         if (diasSelecionados.length === 0) {
@@ -100,14 +99,12 @@ export default function AgendamentoForm({
             ...formData,
             data: data
           }
-          console.log('Salvando agendamento recorrente:', agendamentoData)
           await onSave(agendamentoData)
         }
         
         showSuccess(`${datas.length} agendamentos criados com sucesso!`)
       } else {
         // Agendamento único
-        console.log('Salvando agendamento único:', formData)
         await onSave(formData)
         
         showSuccess(
@@ -119,7 +116,6 @@ export default function AgendamentoForm({
       
       onClose()
     } catch (error) {
-      console.error('Erro ao salvar agendamento:', error)
       showError(error.message)
     } finally {
       setLoading(false)

@@ -24,11 +24,7 @@ const categoriasCores = {
 function Cronograma() {
   const [funcionarioSelecionado, setFuncionarioSelecionado] = useState('todos')
   const [visualizacao, setVisualizacao] = useState('timeline') // timeline ou grade
-  const [dataSelecionada, setDataSelecionada] = useState(() => {
-    const hoje = new Date().toISOString().split('T')[0]
-    console.log('Data inicial selecionada:', hoje)
-    return hoje
-  })
+  const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0])
   // const { showSuccess, showError } = useNotifications()
   const showSuccess = (message) => alert('Sucesso: ' + message)
   const showError = (message) => alert('Erro: ' + message)
@@ -137,29 +133,18 @@ function Cronograma() {
   const dadosFiltrados = useMemo(() => {
     if (!agenda) return []
     
-    console.log('=== DEBUG CRONOGRAMA ===')
-    console.log('Agenda completa:', agenda)
-    console.log('Data selecionada:', dataSelecionada)
-    console.log('Funcionário selecionado:', funcionarioSelecionado)
-    
     let filtrados = agenda
     
     // Filtrar por data
     filtrados = filtrados.filter(item => {
       const itemData = item.data || new Date().toISOString().split('T')[0]
-      console.log(`Item: ${item.id}, Data do item: ${itemData}, Data selecionada: ${dataSelecionada}, Match: ${itemData === dataSelecionada}`)
       return itemData === dataSelecionada
     })
-    
-    console.log('Dados filtrados por data:', filtrados)
     
     // Filtrar por funcionário
     if (funcionarioSelecionado !== 'todos') {
       filtrados = filtrados.filter(item => item.funcionario === funcionarioSelecionado)
     }
-    
-    console.log('Dados finais filtrados:', filtrados)
-    console.log('=== FIM DEBUG ===')
     
     return filtrados
   }, [agenda, funcionarioSelecionado, dataSelecionada])
@@ -443,35 +428,7 @@ function Cronograma() {
             >
               Hoje
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                console.log('=== DEBUG MANUAL ===')
-                console.log('Data selecionada:', dataSelecionada)
-                console.log('Agenda completa:', agenda)
-                console.log('Dados filtrados:', dadosFiltrados)
-                
-                // Testar criação de agendamento
-                try {
-                  const novoAgendamento = {
-                    horario: '15:30',
-                    funcionario_id: 'michelle',
-                    tarefa_id: 'checkins',
-                    data: dataSelecionada
-                  }
-                  console.log('Criando agendamento de teste:', novoAgendamento)
-                  await supabaseService.createAgendamento(novoAgendamento)
-                  console.log('Agendamento criado com sucesso!')
-                  refetchAgenda()
-                } catch (error) {
-                  console.error('Erro ao criar agendamento:', error)
-                }
-              }}
-              className="text-xs bg-red-500 text-white"
-            >
-              DEBUG
-            </Button>
+
           </div>
           
           {datasComAgendamentos.length > 1 && (

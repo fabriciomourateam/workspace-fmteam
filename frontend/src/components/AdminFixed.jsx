@@ -11,6 +11,7 @@ import { ErrorMessage } from './ui/error'
 import FuncionarioForm from './forms/FuncionarioForm'
 import TarefaForm from './forms/TarefaForm'
 import AgendamentoForm from './forms/AgendamentoForm'
+import ExclusaoMassa from './ExclusaoMassa'
 import supabaseService from '../services/supabase'
 
 function Admin() {
@@ -26,6 +27,7 @@ function Admin() {
   const [editingFuncionario, setEditingFuncionario] = useState(null)
   const [editingTarefa, setEditingTarefa] = useState(null)
   const [editingAgendamento, setEditingAgendamento] = useState(null)
+  const [exclusaoMassaOpen, setExclusaoMassaOpen] = useState(false)
 
   // Carrega dados da API
   const { data: funcionarios, loading: loadingFuncionarios, error: errorFuncionarios, refetch: refetchFuncionarios } = useFuncionarios()
@@ -371,10 +373,20 @@ function Admin() {
         <TabsContent value="agenda" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Agendamentos</h3>
-            <Button onClick={handleCreateAgendamento}>
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Agendamento
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="destructive" 
+                onClick={() => setExclusaoMassaOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Exclusão em Massa
+              </Button>
+              <Button onClick={handleCreateAgendamento}>
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Agendamento
+              </Button>
+            </div>
           </div>
           
           <Card>
@@ -461,6 +473,16 @@ function Admin() {
         funcionarios={funcionarios || []}
         tarefas={tarefas || []}
         onSave={handleSaveAgendamento}
+      />
+
+      {/* Modal de Exclusão em Massa */}
+      <ExclusaoMassa
+        isOpen={exclusaoMassaOpen}
+        onClose={() => setExclusaoMassaOpen(false)}
+        onSuccess={() => {
+          refetchAgenda()
+          showSuccess('Agendamentos excluídos com sucesso!')
+        }}
       />
     </div>
   )

@@ -17,7 +17,7 @@ import Cronograma from './components/Cronograma'
 import Processos from './components/Processos'
 import Relatorios from './components/Relatorios'
 import Admin from './components/AdminFixed'
-import Calendario from './components/Calendario'
+import CalendarioAgendamentos from './components/CalendarioAgendamentos'
 // import useKeyboardShortcuts from './hooks/useKeyboardShortcuts'
 import { useFuncionarios, useAgenda } from './hooks/useApi'
 import { ApiStatus } from './components/ApiStatus'
@@ -34,22 +34,29 @@ function Navigation() {
   const { data: funcionarios } = useFuncionarios()
   const { data: agenda } = useAgenda()
   
-  const navItems = [
-    { path: '/', icon: BarChart3, label: 'Dashboard', shortcut: '1' },
-    { path: '/dashboard-avancado', icon: Clock, label: 'Dashboard Avançado', shortcut: '2' },
-    { path: '/metas', icon: Filter, label: 'Metas & KPIs', shortcut: '3' },
-    { path: '/cronograma', icon: Calendar, label: 'Cronograma', shortcut: '4' },
-    { path: '/calendario', icon: CalendarDays, label: 'Calendário', shortcut: '5' },
+  // Itens principais (sempre visíveis)
+  const mainNavItems = [
+    { path: '/', icon: BarChart3, label: 'Dashboard', shortcut: '1', compact: 'Dash' },
+    { path: '/cronograma', icon: Calendar, label: 'Cronograma', shortcut: '2', compact: 'Crono' },
+    { path: '/calendario', icon: CalendarDays, label: 'Calendário', shortcut: '3', compact: 'Cal' },
+    { path: '/metas', icon: Filter, label: 'Metas & KPIs', shortcut: '4', compact: 'Metas' }
+  ]
+  
+  // Itens secundários (no menu dropdown)
+  const secondaryNavItems = [
+    { path: '/dashboard-avancado', icon: Clock, label: 'Dashboard Avançado', shortcut: '5' },
     { path: '/processos', icon: FileText, label: 'Processos', shortcut: '6' },
     { path: '/relatorios', icon: Users, label: 'Relatórios', shortcut: '7' },
     { path: '/admin', icon: Settings, label: 'Admin', shortcut: '8' }
   ]
+  
+  const allNavItems = [...mainNavItems, ...secondaryNavItems]
 
   // Keyboard shortcuts
   const shortcuts = [
     { key: 'ctrl+k', action: () => setSearchOpen(true) },
     { key: 'ctrl+/', action: () => setSearchOpen(true) },
-    ...navItems.map(item => ({
+    ...allNavItems.map(item => ({
       key: item.shortcut,
       action: () => navigate(item.path)
     }))
@@ -62,163 +69,226 @@ function Navigation() {
     setSearchOpen(false)
   }
 
+  // Verificar se item está ativo (incluindo subitens)
+  const isItemActive = (path) => {
+    if (path === '/' && location.pathname === '/') return true
+    if (path !== '/' && location.pathname.startsWith(path)) return true
+    return location.pathname === path
+  }
+
   return (
     <>
-      <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 transition-colors duration-300 shadow-sm">
+      <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 py-2 transition-colors duration-300 shadow-sm">
         <div className="w-full flex items-center justify-between">
-          <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
-            <div className="flex items-center space-x-1 sm:space-x-2 animate-fadeInLeft">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 rounded-lg flex items-center justify-center shadow-md hover-lift transition-all duration-200">
-                <Clock className="w-3 h-3 sm:w-5 sm:h-5 text-white" />
-              </div>
-              <h1 className="text-sm sm:text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
-                <span className="hidden sm:inline">Workspace Visual</span>
-                <span className="sm:hidden">WV</span>
-              </h1>
+          {/* Logo e Título */}
+          <div className="flex items-center space-x-3 flex-shrink-0">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-md">
+              <Clock className="w-5 h-5 text-white" />
             </div>
-            
-            {/* Navegação - escondida em telas pequenas */}
-            <div className="hidden lg:flex space-x-1 animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
-              {navItems.map((item, index) => {
-                const Icon = item.icon
-                const isActive = location.pathname === item.path
-                
-                return (
-                  <Link key={item.path} to={item.path}>
-                    <Button
-                      variant={isActive ? "default" : "ghost"}
-                      size="sm"
-                      className={`flex items-center space-x-2 transition-all duration-200 hover-lift group relative px-3 ${
-                        isActive 
-                          ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white shadow-md' 
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <Icon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
-                      <span className="font-medium text-sm">{item.label}</span>
-                      
-                      {/* Shortcut indicator */}
-                      <kbd className="hidden xl:inline-block ml-2 px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded opacity-60 group-hover:opacity-100 transition-opacity">
-                        {item.shortcut}
-                      </kbd>
-                    </Button>
-                  </Link>
-                )
-              })}
-            </div>
-
-            {/* Navegação compacta para telas médias */}
-            <div className="hidden md:flex lg:hidden space-x-0.5 animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
-              {navItems.map((item, index) => {
-                const Icon = item.icon
-                const isActive = location.pathname === item.path
-                
-                return (
-                  <Link key={item.path} to={item.path}>
-                    <Button
-                      variant={isActive ? "default" : "ghost"}
-                      size="sm"
-                      className={`flex items-center transition-all duration-200 hover-lift group relative px-2 ${
-                        isActive 
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' 
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                      title={item.label}
-                    >
-                      <Icon className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                )
-              })}
-            </div>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white hidden sm:block">
+              Workspace Visual
+            </h1>
           </div>
           
-          <div className="flex items-center space-x-1 animate-fadeInRight flex-shrink-0">
-            {/* Search Button - compacto */}
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="flex items-center px-2 py-1.5 text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-all duration-200"
-              title="Buscar (Ctrl+K)"
-            >
-              <Search className="w-4 h-4" />
-              <span className="hidden xl:inline ml-2 text-sm">Buscar</span>
-            </button>
-
-            {/* Badges - apenas em telas grandes */}
-            <div className="hidden xl:flex items-center space-x-2">
-              <Badge 
-                variant="outline" 
-                className="text-green-600 border-green-600 bg-green-50 dark:bg-green-900/20 text-xs px-2 py-1"
-              >
-                {funcionarios?.length || 0} Funcionários
-              </Badge>
-              <Badge 
-                variant="outline" 
-                className="text-blue-600 border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-xs px-2 py-1"
-              >
-                {agenda?.length || 0} Tarefas
-              </Badge>
-            </div>
-            
-            {/* Badges compactos para telas médias */}
-            <div className="hidden md:flex xl:hidden items-center space-x-1">
-              <Badge variant="outline" className="text-green-600 border-green-600 text-xs px-1 py-0.5">
-                {funcionarios?.length || 0}
-              </Badge>
-              <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs px-1 py-0.5">
-                {agenda?.length || 0}
-              </Badge>
-            </div>
-            
-            {/* <ThemeToggle /> */}
-          </div>
-        </div>
-
-        {/* Menu Mobile - para telas menores que lg */}
-        <div className="lg:hidden">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2"
-          >
-            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-          </Button>
-        </div>
-      </nav>
-
-      {/* Menu Mobile Dropdown */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shadow-lg">
-          <div className="flex flex-col space-y-2">
-            {navItems.map((item) => {
+          {/* Navegação Principal - Desktop */}
+          <div className="hidden lg:flex items-center space-x-1 flex-1 justify-center max-w-2xl">
+            {mainNavItems.map((item) => {
               const Icon = item.icon
-              const isActive = location.pathname === item.path
+              const isActive = isItemActive(item.path)
               
               return (
-                <Link 
-                  key={item.path} 
-                  to={item.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
+                <Link key={item.path} to={item.path}>
                   <Button
                     variant={isActive ? "default" : "ghost"}
-                    className={`w-full justify-start space-x-3 py-2 ${
+                    size="sm"
+                    className={`flex items-center space-x-2 px-3 py-2 transition-all duration-200 ${
                       isActive 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    <span className="font-medium">{item.label}</span>
+                    <span className="font-medium text-sm">{item.label}</span>
                   </Button>
                 </Link>
               )
             })}
             
+            {/* Menu Dropdown para itens secundários */}
+            <div className="relative group">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center space-x-1 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              >
+                <Menu className="w-4 h-4" />
+                <span className="text-sm">Mais</span>
+              </Button>
+              
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="py-1">
+                  {secondaryNavItems.map((item) => {
+                    const Icon = item.icon
+                    const isActive = isItemActive(item.path)
+                    
+                    return (
+                      <Link key={item.path} to={item.path}>
+                        <div className={`flex items-center space-x-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                          isActive ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : 'text-gray-700'
+                        }`}>
+                          <Icon className="w-4 h-4" />
+                          <span>{item.label}</span>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Navegação Compacta - Tablet */}
+          <div className="hidden md:flex lg:hidden items-center space-x-1 flex-1 justify-center">
+            {mainNavItems.map((item) => {
+              const Icon = item.icon
+              const isActive = isItemActive(item.path)
+              
+              return (
+                <Link key={item.path} to={item.path}>
+                  <Button
+                    variant={isActive ? "default" : "ghost"}
+                    size="sm"
+                    className={`flex flex-col items-center px-2 py-2 transition-all duration-200 ${
+                      isActive 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    title={item.label}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="text-xs mt-1">{item.compact}</span>
+                  </Button>
+                </Link>
+              )
+            })}
+            
+            {/* Menu Mobile Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="flex flex-col items-center px-2 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            >
+              <Menu className="w-4 h-4" />
+              <span className="text-xs mt-1">Mais</span>
+            </Button>
+          </div>
+          
+          {/* Área Direita */}
+          <div className="flex items-center space-x-2 flex-shrink-0">
+            {/* Badges - apenas desktop */}
+            <div className="hidden xl:flex items-center space-x-2">
+              <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50 text-xs px-2 py-1">
+                {funcionarios?.length || 0} Funcionários
+              </Badge>
+              <Badge variant="outline" className="text-blue-600 border-blue-600 bg-blue-50 text-xs px-2 py-1">
+                {agenda?.length || 0} Tarefas
+              </Badge>
+            </div>
+            
+            {/* Search Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchOpen(true)}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              title="Buscar (Ctrl+K)"
+            >
+              <Search className="w-4 h-4" />
+            </Button>
+            
+            {/* Menu Mobile - apenas mobile */}
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              >
+                {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Menu Mobile Dropdown */}
+      {mobileMenuOpen && (
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shadow-lg">
+          <div className="flex flex-col space-y-1">
+            {/* Itens principais */}
+            <div className="space-y-1">
+              {mainNavItems.map((item) => {
+                const Icon = item.icon
+                const isActive = isItemActive(item.path)
+                
+                return (
+                  <Link 
+                    key={item.path} 
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Button
+                      variant={isActive ? "default" : "ghost"}
+                      className={`w-full justify-start space-x-3 py-2 ${
+                        isActive 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="font-medium">{item.label}</span>
+                    </Button>
+                  </Link>
+                )
+              })}
+            </div>
+            
+            {/* Separador */}
+            <div className="border-t border-gray-200 my-2"></div>
+            
+            {/* Itens secundários */}
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-gray-500 px-3 py-1">Mais opções</div>
+              {secondaryNavItems.map((item) => {
+                const Icon = item.icon
+                const isActive = isItemActive(item.path)
+                
+                return (
+                  <Link 
+                    key={item.path} 
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Button
+                      variant={isActive ? "default" : "ghost"}
+                      className={`w-full justify-start space-x-3 py-2 ${
+                        isActive 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="font-medium">{item.label}</span>
+                    </Button>
+                  </Link>
+                )
+              })}
+            </div>
+            
             {/* Badges e info no menu mobile */}
-            <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between items-center pt-3 border-t border-gray-200">
               <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50">
                 {funcionarios?.length || 0} Funcionários
               </Badge>
@@ -253,7 +323,7 @@ function AppContent() {
               <Route path="/dashboard-avancado" element={<DashboardAvancado />} />
               <Route path="/metas" element={<MetasKPIs />} />
               <Route path="/cronograma" element={<Cronograma />} />
-              <Route path="/calendario" element={<Calendario />} />
+              <Route path="/calendario" element={<CalendarioAgendamentos />} />
               <Route path="/processos" element={<Processos />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/admin" element={<Admin />} />
