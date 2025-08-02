@@ -24,7 +24,11 @@ const categoriasCores = {
 function Cronograma() {
   const [funcionarioSelecionado, setFuncionarioSelecionado] = useState('todos')
   const [visualizacao, setVisualizacao] = useState('timeline') // timeline ou grade
-  const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0])
+  const [dataSelecionada, setDataSelecionada] = useState(() => {
+    const hoje = new Date().toISOString().split('T')[0]
+    console.log('Data inicial selecionada:', hoje)
+    return hoje
+  })
   // const { showSuccess, showError } = useNotifications()
   const showSuccess = (message) => alert('Sucesso: ' + message)
   const showError = (message) => alert('Erro: ' + message)
@@ -438,6 +442,35 @@ function Cronograma() {
               className="text-xs"
             >
               Hoje
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                console.log('=== DEBUG MANUAL ===')
+                console.log('Data selecionada:', dataSelecionada)
+                console.log('Agenda completa:', agenda)
+                console.log('Dados filtrados:', dadosFiltrados)
+                
+                // Testar criação de agendamento
+                try {
+                  const novoAgendamento = {
+                    horario: '15:30',
+                    funcionario_id: 'michelle',
+                    tarefa_id: 'checkins',
+                    data: dataSelecionada
+                  }
+                  console.log('Criando agendamento de teste:', novoAgendamento)
+                  await supabaseService.createAgendamento(novoAgendamento)
+                  console.log('Agendamento criado com sucesso!')
+                  refetchAgenda()
+                } catch (error) {
+                  console.error('Erro ao criar agendamento:', error)
+                }
+              }}
+              className="text-xs bg-red-500 text-white"
+            >
+              DEBUG
             </Button>
           </div>
           
