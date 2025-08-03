@@ -22,8 +22,8 @@ export default function AgendamentoForm({
   const [loading, setLoading] = useState(false)
   
   const [formData, setFormData] = useState({
-    horario: agendamento?.horario || horarioInicial || '',
-    funcionario_id: agendamento?.funcionario_id || funcionarioInicial || '',
+    horarios: agendamento?.horario ? [agendamento.horario] : (horarioInicial ? [horarioInicial] : []),
+    funcionarios_ids: agendamento?.funcionario_id ? [agendamento.funcionario_id] : (funcionarioInicial ? [funcionarioInicial] : []),
     tarefa_id: agendamento?.tarefa_id || '',
     data: agendamento?.data || dataInicial || new Date().toISOString().split('T')[0]
   })
@@ -87,11 +87,11 @@ export default function AgendamentoForm({
     setLoading(true)
 
     try {
-      if (!formData.funcionario_id || !formData.tarefa_id || !formData.horario) {
-        throw new Error('Todos os campos são obrigatórios')
+      if (formData.funcionarios_ids.length === 0 || !formData.tarefa_id || formData.horarios.length === 0) {
+        throw new Error('Selecione pelo menos um funcionário, um horário e uma tarefa')
       }
 
-
+      let totalAgendamentos = 0
 
       if (tipoAgendamento === 'recorrente') {
         if (diasSelecionados.length === 0) {
@@ -104,27 +104,53 @@ export default function AgendamentoForm({
           throw new Error('Data fim deve ser posterior à data início')
         }
 
-        // Gerar múltiplos agendamentos
+        // Gerar múltiplos agendamentos para cada combinação
         const datas = gerarDatasRecorrentes(dataInicio, dataFim, diasSelecionados)
         
         for (const data of datas) {
-          const agendamentoData = {
-            ...formData,
-            data: data
+          for (const funcionario_id of formData.funcionarios_ids) {
+            for (const horario of formData.horarios) {
+              const agendamentoData = {
+                funcionario_id,
+                horario,
+                tarefa_id: formData.tarefa_id,
+                data: data
+              }
+              await onSave(agendamentoData)
+              totalAgendamentos++
+            }
           }
-          await onSave(agendamentoData)
         }
         
-        showSuccess(`${datas.length} agendamentos criados com sucesso!`)
+        showSuccess(`${totalAgendamentos} agendamentos criados com sucesso!`)
       } else {
-        // Agendamento único
-        await onSave(formData)
-        
-        showSuccess(
-          agendamento 
-            ? 'Agendamento atualizado com sucesso!' 
-            : 'Agendamento criado com sucesso!'
-        )
+        // Agendamentos múltiplos para data única
+        if (agendamento) {
+          // Modo edição - manter comportamento original
+          const agendamentoData = {
+            funcionario_id: formData.funcionarios_ids[0],
+            horario: formData.horarios[0],
+            tarefa_id: formData.tarefa_id,
+            data: formData.data
+          }
+          await onSave(agendamentoData)
+          showSuccess('Agendamento atualizado com sucesso!')
+        } else {
+          // Modo criação - múltiplas combinações
+          for (const funcionario_id of formData.funcionarios_ids) {
+            for (const horario of formData.horarios) {
+              const agendamentoData = {
+                funcionario_id,
+                horario,
+                tarefa_id: formData.tarefa_id,
+                data: formData.data
+              }
+              await onSave(agendamentoData)
+              totalAgendamentos++
+            }
+          }
+          showSuccess(`${totalAgendamentos} agendamento${totalAgendamentos > 1 ? 's' : ''} criado${totalAgendamentos > 1 ? 's' : ''} com sucesso!`)
+        }
       }
       
       onClose()
@@ -142,6 +168,24 @@ export default function AgendamentoForm({
     }))
   }
 
+  const toggleHorario = (horario) => {
+    setFormData(prev => ({
+      ...prev,
+      horarios: prev.horarios.includes(horario)
+        ? prev.horarios.filter(h => h !== horario)
+        : [...prev.horarios, horario].sort()
+    }))
+  }
+
+  const toggleFuncionario = (funcionarioId) => {
+    setFormData(prev => ({
+      ...prev,
+      funcionarios_ids: prev.funcionarios_ids.includes(funcionarioId)
+        ? prev.funcionarios_ids.filter(id => id !== funcionarioId)
+        : [...prev.funcionarios_ids, funcionarioId]
+    }))
+  }
+
   const toggleDiaSemana = (diaId) => {
     setDiasSelecionados(prev => 
       prev.includes(diaId) 
@@ -156,7 +200,7 @@ export default function AgendamentoForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {agendamento ? 'Editar Agendamento' : 'Novo Agendamento'}
@@ -271,42 +315,94 @@ export default function AgendamentoForm({
             </div>
           )}
 
+          {/* Seleção múltipla de horários */}
           <div className="space-y-2">
-            <Label htmlFor="horario">Horário</Label>
-            <Select value={formData.horario} onValueChange={(value) => handleChange('horario', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o horário" />
-              </SelectTrigger>
-              <SelectContent>
+            <Label>Horários ({formData.horarios.length} selecionado{formData.horarios.length !== 1 ? 's' : ''})</Label>
+            <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
+              <div className="grid grid-cols-3 gap-2">
                 {horarios.map(horario => (
-                  <SelectItem key={horario} value={horario}>
+                  <button
+                    key={horario}
+                    type="button"
+                    onClick={() => toggleHorario(horario)}
+                    className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
+                      formData.horarios.includes(horario)
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
                     {horario}
-                  </SelectItem>
+                  </button>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setFormData(prev => ({ ...prev, horarios: [] }))}
+              >
+                Limpar
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setFormData(prev => ({ ...prev, horarios: horarios.filter(h => parseInt(h.split(':')[0]) >= 8 && parseInt(h.split(':')[0]) < 18) }))}
+              >
+                Horário comercial
+              </Button>
+            </div>
           </div>
 
+          {/* Seleção múltipla de funcionários */}
           <div className="space-y-2">
-            <Label htmlFor="funcionario">Funcionário</Label>
-            <Select value={formData.funcionario_id} onValueChange={(value) => handleChange('funcionario_id', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o funcionário" />
-              </SelectTrigger>
-              <SelectContent>
-                {funcionarios.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => (
-                  <SelectItem key={funcionario.id} value={funcionario.id}>
-                    <div className="flex items-center space-x-2">
-                      <div 
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: funcionario.cor }}
-                      />
-                      <span>{funcionario.nome}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Funcionários ({formData.funcionarios_ids.length} selecionado{formData.funcionarios_ids.length !== 1 ? 's' : ''})</Label>
+            <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
+              {funcionarios.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => (
+                <button
+                  key={funcionario.id}
+                  type="button"
+                  onClick={() => toggleFuncionario(funcionario.id)}
+                  className={`w-full flex items-center space-x-3 p-2 rounded-md text-left transition-colors ${
+                    formData.funcionarios_ids.includes(funcionario.id)
+                      ? 'bg-blue-50 border-2 border-blue-500'
+                      : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                  }`}
+                >
+                  <div 
+                    className="w-4 h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: funcionario.cor }}
+                  />
+                  <span className="font-medium">{funcionario.nome}</span>
+                  {formData.funcionarios_ids.includes(funcionario.id) && (
+                    <span className="ml-auto text-blue-600 text-sm">✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setFormData(prev => ({ ...prev, funcionarios_ids: [] }))}
+              >
+                Limpar
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  funcionarios_ids: funcionarios.filter(f => f.id && f.id.trim() !== '').map(f => f.id) 
+                }))}
+              >
+                Selecionar todos
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -330,6 +426,37 @@ export default function AgendamentoForm({
             </Select>
           </div>
 
+          {/* Resumo das combinações */}
+          {!agendamento && formData.funcionarios_ids.length > 0 && formData.horarios.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <h4 className="font-medium text-blue-900 mb-2">Resumo do Agendamento</h4>
+              <div className="text-sm text-blue-800">
+                {tipoAgendamento === 'recorrente' ? (
+                  <div>
+                    <p><strong>Funcionários:</strong> {formData.funcionarios_ids.length}</p>
+                    <p><strong>Horários:</strong> {formData.horarios.length}</p>
+                    <p><strong>Dias selecionados:</strong> {diasSelecionados.length}</p>
+                    <p><strong>Período:</strong> {dataInicio} até {dataFim}</p>
+                    {diasSelecionados.length > 0 && dataInicio && dataFim && (
+                      <p className="font-semibold mt-2">
+                        Total estimado: ~{formData.funcionarios_ids.length * formData.horarios.length * gerarDatasRecorrentes(dataInicio, dataFim, diasSelecionados).length} agendamentos
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <p><strong>Data:</strong> {new Date(formData.data + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                    <p><strong>Funcionários:</strong> {formData.funcionarios_ids.length}</p>
+                    <p><strong>Horários:</strong> {formData.horarios.length}</p>
+                    <p className="font-semibold mt-2">
+                      Total: {formData.funcionarios_ids.length * formData.horarios.length} agendamento{formData.funcionarios_ids.length * formData.horarios.length > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end space-x-2 pt-4">
             <Button 
               type="button" 
@@ -343,7 +470,7 @@ export default function AgendamentoForm({
               type="submit" 
               disabled={loading}
             >
-              {loading ? 'Salvando...' : 'Salvar'}
+              {loading ? 'Salvando...' : (agendamento ? 'Salvar' : 'Criar Agendamentos')}
             </Button>
           </div>
         </form>
