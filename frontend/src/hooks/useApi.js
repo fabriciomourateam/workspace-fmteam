@@ -80,3 +80,7 @@ export function useFuncionario(id) {
 export function useAgendaFuncionario(funcionarioId) {
   return useApi(() => dataService.getAgendaFuncionario(funcionarioId), [funcionarioId]);
 }
+
+export function useDemandas() {
+  return useApi(() => supabaseService.getDemandas(), []);
+}

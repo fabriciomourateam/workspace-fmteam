@@ -356,10 +356,7 @@ class SupabaseService {
   async getProcessos() {
     const { data, error } = await supabase
       .from('processos')
-      .select(`
-        *,
-        tarefa:tarefas(nome, categoria)
-      `)
+      .select('*')
       .order('titulo')
 
     if (error) throw error
@@ -404,6 +401,59 @@ class SupabaseService {
   async deleteProcesso(id) {
     const { error } = await supabase
       .from('processos')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+  }
+
+  // Demandas
+  async getDemandas() {
+    const { data, error } = await supabase
+      .from('demandas')
+      .select('*')
+      .order('importancia', { ascending: false })
+      .order('prazo', { ascending: true })
+
+    if (error) throw error
+    return data
+  }
+
+  async getDemanda(id) {
+    const { data, error } = await supabase
+      .from('demandas')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  async createDemanda(demanda) {
+    const { data, error } = await supabase
+      .from('demandas')
+      .insert([demanda])
+      .select()
+
+    if (error) throw error
+    return data[0]
+  }
+
+  async updateDemanda(id, updates) {
+    const { data, error } = await supabase
+      .from('demandas')
+      .update(updates)
+      .eq('id', id)
+      .select()
+
+    if (error) throw error
+    return data[0]
+  }
+
+  async deleteDemanda(id) {
+    const { error } = await supabase
+      .from('demandas')
       .delete()
       .eq('id', id)
 

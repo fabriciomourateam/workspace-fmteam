@@ -4,12 +4,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
-import { TrendingUp, Users, Clock, Target, Download, Calendar, FileSpreadsheet, FileText, File, FileImage, FileDown } from 'lucide-react'
+import { TrendingUp, Users, Clock, Target, Download, Calendar, FileSpreadsheet, FileText, File } from 'lucide-react'
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
+
+
 
 const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899']
 
@@ -134,173 +134,9 @@ function Relatorios() {
     window.URL.revokeObjectURL(url)
   }
 
-  const exportarPDF = async () => {
-    try {
-      // Encontrar o elemento do relatório
-      const elemento = document.getElementById('relatorio-container')
-      if (!elemento) {
-        alert('❌ Erro: Não foi possível encontrar o conteúdo do relatório')
-        return
-      }
 
-      // Mostrar loading
-      const loadingMsg = document.createElement('div')
-      loadingMsg.innerHTML = '📄 Gerando PDF... Aguarde...'
-      loadingMsg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:9999;font-size:16px;font-family:Arial,sans-serif;'
-      document.body.appendChild(loadingMsg)
 
-      // Aguardar um pouco para garantir que o DOM está estável
-      await new Promise(resolve => setTimeout(resolve, 500))
 
-      // Capturar screenshot com configurações mais robustas
-      const canvas = await html2canvas(elemento, {
-        scale: 1.5, // Qualidade boa mas não excessiva
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        logging: false, // Desabilitar logs
-        imageTimeout: 15000,
-        removeContainer: true,
-        foreignObjectRendering: false, // Evitar problemas com SVG
-        ignoreElements: (element) => {
-          // Ignorar elementos que podem causar problemas
-          return element.tagName === 'IFRAME' || 
-                 element.tagName === 'OBJECT' || 
-                 element.tagName === 'EMBED' ||
-                 element.classList?.contains('recharts-surface') // Ignorar gráficos complexos se necessário
-        }
-      })
-
-      // Criar PDF
-      const imgData = canvas.toDataURL('image/png', 0.95)
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      
-      // Calcular dimensões para caber na página
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = pdf.internal.pageSize.getHeight() - 20
-      const imgWidth = canvas.width
-      const imgHeight = canvas.height
-      const ratio = Math.min((pdfWidth - 20) / imgWidth, pdfHeight / imgHeight)
-      const imgX = (pdfWidth - imgWidth * ratio) / 2
-      const imgY = 10
-
-      // Adicionar imagem ao PDF
-      const scaledHeight = imgHeight * ratio
-      if (scaledHeight > pdfHeight) {
-        const newRatio = pdfHeight / imgHeight
-        pdf.addImage(imgData, 'PNG', (pdfWidth - imgWidth * newRatio) / 2, imgY, imgWidth * newRatio, imgHeight * newRatio)
-      } else {
-        pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, scaledHeight)
-      }
-
-      // Salvar
-      const timestamp = new Date().toISOString().split('T')[0]
-      pdf.save(`relatorio-visual-${timestamp}.pdf`)
-
-      // Remover loading
-      document.body.removeChild(loadingMsg)
-      alert('✅ Relatório PDF exportado com sucesso!')
-
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error)
-      // Remover loading se ainda existir
-      const existingLoading = document.querySelector('[style*="position:fixed"][style*="z-index:9999"]')
-      if (existingLoading) {
-        document.body.removeChild(existingLoading)
-      }
-      alert(`❌ Erro ao gerar PDF: ${error.message || 'Erro desconhecido'}. Tente novamente.`)
-    }
-  }
-
-  const exportarJPEG = async () => {
-    try {
-      // Encontrar o elemento do relatório
-      const elemento = document.getElementById('relatorio-container')
-      if (!elemento) {
-        alert('❌ Erro: Não foi possível encontrar o conteúdo do relatório')
-        return
-      }
-
-      // Mostrar loading
-      const loadingMsg = document.createElement('div')
-      loadingMsg.innerHTML = '🖼️ Gerando imagem... Aguarde...'
-      loadingMsg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:9999;font-size:16px;font-family:Arial,sans-serif;'
-      document.body.appendChild(loadingMsg)
-
-      // Aguardar um pouco para garantir que o DOM está estável
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // Capturar screenshot com configurações mais robustas
-      const canvas = await html2canvas(elemento, {
-        scale: 1.5, // Qualidade boa mas não excessiva
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        logging: false, // Desabilitar logs
-        imageTimeout: 15000,
-        removeContainer: true,
-        foreignObjectRendering: false, // Evitar problemas com SVG
-        onclone: (clonedDoc) => {
-          // Substituir cores problemáticas no documento clonado
-          const style = clonedDoc.createElement('style')
-          style.textContent = `
-            * {
-              color: rgb(0, 0, 0) !important;
-              background-color: rgb(255, 255, 255) !important;
-              border-color: rgb(200, 200, 200) !important;
-            }
-            .bg-red-600 { background-color: rgb(220, 38, 38) !important; }
-            .bg-blue-600 { background-color: rgb(37, 99, 235) !important; }
-            .bg-green-600 { background-color: rgb(22, 163, 74) !important; }
-            .bg-yellow-500 { background-color: rgb(234, 179, 8) !important; }
-            .bg-purple-600 { background-color: rgb(147, 51, 234) !important; }
-            .text-red-600 { color: rgb(220, 38, 38) !important; }
-            .text-blue-600 { color: rgb(37, 99, 235) !important; }
-            .text-green-600 { color: rgb(22, 163, 74) !important; }
-            .text-gray-600 { color: rgb(75, 85, 99) !important; }
-            .text-gray-900 { color: rgb(17, 24, 39) !important; }
-          `
-          clonedDoc.head.appendChild(style)
-        },
-        ignoreElements: (element) => {
-          // Ignorar elementos que podem causar problemas
-          return element.tagName === 'IFRAME' || 
-                 element.tagName === 'OBJECT' || 
-                 element.tagName === 'EMBED'
-        }
-      })
-
-      // Converter para JPEG e baixar
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          throw new Error('Falha ao gerar imagem')
-        }
-        
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        const timestamp = new Date().toISOString().split('T')[0]
-        link.href = url
-        link.download = `relatorio-visual-${timestamp}.jpg`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-
-        // Remover loading
-        document.body.removeChild(loadingMsg)
-        alert('✅ Relatório JPEG exportado com sucesso!')
-      }, 'image/jpeg', 0.95)
-
-    } catch (error) {
-      console.error('Erro ao gerar JPEG:', error)
-      // Remover loading se ainda existir
-      const existingLoading = document.querySelector('[style*="position:fixed"][style*="z-index:9999"]')
-      if (existingLoading) {
-        document.body.removeChild(existingLoading)
-      }
-      alert(`❌ Erro ao gerar imagem: ${error.message || 'Erro desconhecido'}. Tente novamente.`)
-    }
-  }
 
 
 
@@ -695,28 +531,6 @@ function Relatorios() {
           </Select>
           
           <div className="flex flex-col gap-2">
-            <div className="text-xs text-gray-600 font-medium">📊 Exportação Visual:</div>
-            <div className="flex gap-2">
-              <Button 
-                variant="default" 
-                onClick={exportarPDF}
-                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 shadow-md"
-              >
-                <FileDown className="w-4 h-4" />
-                <span>PDF</span>
-              </Button>
-              <Button 
-                variant="default" 
-                onClick={exportarJPEG}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 shadow-md"
-              >
-                <FileImage className="w-4 h-4" />
-                <span>JPEG</span>
-              </Button>
-            </div>
-            
-
-            
             <div className="text-xs text-gray-600 font-medium">📄 Exportação de Dados:</div>
             <div className="flex gap-2">
               <Button 

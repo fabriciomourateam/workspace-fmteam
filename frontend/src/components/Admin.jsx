@@ -705,7 +705,12 @@ function Admin() {
                 return (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-4">
-                      <Badge variant="outline">{formatarHorarioIntervalo(item.horario)}</Badge>
+                      <div className="flex flex-col items-center gap-1">
+                        <Badge variant="outline" className="text-xs">
+                          {new Date(item.data || new Date().toISOString().split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        </Badge>
+                        <Badge variant="outline">{formatarHorarioIntervalo(item.horario)}</Badge>
+                      </div>
                       <div className="flex items-center space-x-2">
                         <div 
                           className="w-3 h-3 rounded-full"

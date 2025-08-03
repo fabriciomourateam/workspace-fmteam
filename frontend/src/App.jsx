@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Calendar, Users, FileText, BarChart3, Clock, Filter, Settings, CalendarDays, Search, Menu, X } from 'lucide-react'
+import { Calendar, Users, FileText, BarChart3, Clock, Filter, Settings, CalendarDays, Search, Menu, X, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,7 @@ import DashboardAvancado from './components/DashboardAvancado'
 import MetasKPIs from './components/MetasKPIs'
 import Cronograma from './components/Cronograma'
 import Processos from './components/Processos'
+import DemandasImportantes from './components/DemandasImportantes'
 import Relatorios from './components/Relatorios'
 import Admin from './components/AdminFixed'
 import CalendarioAgendamentos from './components/CalendarioAgendamentos'
@@ -39,15 +40,16 @@ function Navigation() {
     { path: '/', icon: BarChart3, label: 'Dashboard', shortcut: '1', compact: 'Dash' },
     { path: '/cronograma', icon: Calendar, label: 'Cronograma', shortcut: '2', compact: 'Crono' },
     { path: '/calendario', icon: CalendarDays, label: 'Calendário', shortcut: '3', compact: 'Cal' },
-    { path: '/metas', icon: Filter, label: 'Metas & KPIs', shortcut: '4', compact: 'Metas' }
+    { path: '/demandas', icon: AlertTriangle, label: 'Demandas', shortcut: '4', compact: 'Dem' },
+    { path: '/metas', icon: Filter, label: 'Metas & KPIs', shortcut: '5', compact: 'Metas' }
   ]
   
   // Itens secundários (no menu dropdown)
   const secondaryNavItems = [
-    { path: '/dashboard-avancado', icon: Clock, label: 'Dashboard Avançado', shortcut: '5' },
-    { path: '/processos', icon: FileText, label: 'Processos', shortcut: '6' },
-    { path: '/relatorios', icon: Users, label: 'Relatórios', shortcut: '7' },
-    { path: '/admin', icon: Settings, label: 'Admin', shortcut: '8' }
+    { path: '/dashboard-avancado', icon: Clock, label: 'Dashboard Avançado', shortcut: '6' },
+    { path: '/processos', icon: FileText, label: 'Processos', shortcut: '7' },
+    { path: '/relatorios', icon: Users, label: 'Relatórios', shortcut: '8' },
+    { path: '/admin', icon: Settings, label: 'Admin', shortcut: '9' }
   ]
   
   const allNavItems = [...mainNavItems, ...secondaryNavItems]
@@ -324,6 +326,7 @@ function AppContent() {
               <Route path="/metas" element={<MetasKPIs />} />
               <Route path="/cronograma" element={<Cronograma />} />
               <Route path="/calendario" element={<CalendarioAgendamentos />} />
+              <Route path="/demandas" element={<DemandasImportantes />} />
               <Route path="/processos" element={<Processos />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/admin" element={<Admin />} />

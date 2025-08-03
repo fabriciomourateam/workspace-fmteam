@@ -28,13 +28,30 @@ function Processos() {
   const carregarProcessos = async () => {
     setLoading(true)
     try {
-      // Carregar processos do Supabase
-      const processosSupabase = await supabaseService.getProcessos()
+      // Tentar carregar tarefas primeiro
+      const tarefas = await supabaseService.getTarefas()
+      
+      // Tentar carregar processos do Supabase (pode falhar se a tabela não existir)
+      let processosSupabase = []
+      try {
+        processosSupabase = await supabaseService.getProcessos()
+      } catch (processosError) {
+        console.warn('Tabela processos não existe ainda, usando apenas dados do JSON:', processosError.message)
+      }
+      
+      // Criar mapa de tarefas por ID
+      const tarefasMap = {}
+      tarefas.forEach(tarefa => {
+        tarefasMap[tarefa.id] = tarefa
+      })
       
       // Criar mapa de processos do Supabase por tarefa_id
       const processosMap = {}
       processosSupabase.forEach(processo => {
-        processosMap[processo.tarefa_id] = processo
+        processosMap[processo.tarefa_id] = {
+          ...processo,
+          tarefa: tarefasMap[processo.tarefa_id] // Adicionar informações da tarefa
+        }
       })
       
       // Combinar com dados do JSON (usar Supabase se existir, senão usar JSON)
@@ -61,6 +78,7 @@ function Processos() {
             frequencia: processoJson.frequencia,
             passos: processoJson.passos,
             observacoes: processoJson.observacoes,
+            tarefa: tarefasMap[tarefaId], // Adicionar informações da tarefa
             isEdited: false,
             isFromJson: true
           })
@@ -81,8 +99,8 @@ function Processos() {
       setProcessos(processosCombinados)
     } catch (error) {
       console.error('Erro ao carregar processos:', error)
-      // Em caso de erro, usar apenas dados do JSON
-      const processosJson = Object.keys(processosData).map(tarefaId => ({
+      // Em caso de erro geral, usar apenas dados do JSON
+      const processosBasicos = Object.keys(processosData).map(tarefaId => ({
         tarefa_id: tarefaId,
         titulo: processosData[tarefaId].titulo,
         descricao: processosData[tarefaId].descricao,
@@ -93,7 +111,7 @@ function Processos() {
         isEdited: false,
         isFromJson: true
       }))
-      setProcessos(processosJson)
+      setProcessos(processosBasicos)
     } finally {
       setLoading(false)
     }
@@ -115,6 +133,11 @@ function Processos() {
       alert('Processo salvo com sucesso!')
     } catch (error) {
       console.error('Erro ao salvar processo:', error)
+      if (error.message.includes('does not exist')) {
+        alert('A tabela de processos ainda não foi criada no Supabase. Execute o SQL do arquivo CREATE_PROCESSOS_TABLE.sql no painel do Supabase para habilitar a edição de processos.')
+      } else {
+        alert('Erro ao salvar processo: ' + error.message)
+      }
       throw error
     }
   }
@@ -407,6 +430,26 @@ function Processos() {
         <h2 className="text-2xl font-bold text-gray-900">Processos Detalhados</h2>
         <p className="text-gray-600">Instruções passo a passo para cada tipo de tarefa</p>
       </div>
+
+      {/* Aviso sobre tabela processos */}
+      {processos.length > 0 && processos.every(p => p.isFromJson) && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-yellow-800">Tabela de processos não encontrada</h3>
+              <p className="text-sm text-yellow-700 mt-1">
+                Para habilitar a edição de processos, execute o arquivo <code className="bg-yellow-100 px-1 rounded">CREATE_PROCESSOS_TABLE.sql</code> no SQL Editor do Supabase.
+                Atualmente, apenas a visualização dos processos padrão está disponível.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

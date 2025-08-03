@@ -14,7 +14,7 @@ import {
   Square,
   Clock
 } from 'lucide-react'
-import { useFuncionarios, useAgenda } from '../hooks/useApi'
+import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import supabaseService from '../services/supabase'
 import { formatarHorarioIntervalo, formatarData, isDataValida } from '../utils/timeUtils'
 
@@ -31,6 +31,7 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
 
   // Carrega dados da API
   const { data: funcionarios } = useFuncionarios()
+  const { data: tarefas } = useTarefas()
   const { data: agenda } = useAgenda()
 
   const showSuccess = (message) => alert('Sucesso: ' + message)
@@ -269,6 +270,7 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
               <div className="max-h-80 overflow-y-auto space-y-2">
                 {agendamentosFiltrados.map(agendamento => {
                   const funcionario = funcionarios?.find(f => f.id === agendamento.funcionario)
+                  const tarefa = tarefas?.find(t => t.id === agendamento.tarefa)
                   const isSelected = agendamentosSelecionados.includes(agendamento.id)
                   
                   return (
@@ -294,7 +296,12 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
                               className="w-3 h-3 rounded-full flex-shrink-0"
                               style={{ backgroundColor: funcionario?.cor }}
                             />
-                            <span className="font-medium text-gray-900">{funcionario?.nome}</span>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-gray-900">{funcionario?.nome}</span>
+                              {tarefa && (
+                                <span className="text-sm text-gray-600">{tarefa.nome}</span>
+                              )}
+                            </div>
                           </div>
                           <Badge 
                             variant="outline" 
@@ -313,17 +320,21 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
                           </Badge>
                         </div>
                         
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>{formatarData(agendamento.data)}</span>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-blue-600" />
+                            <span className="font-medium text-blue-700">
+                              {formatarData(agendamento.data)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-gray-600" />
+                            <span className="text-gray-700">
+                              {formatarHorarioIntervalo(agendamento.horario)}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            <span>{formatarHorarioIntervalo(agendamento.horario)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
                               ID: {agendamento.id}
                             </span>
                           </div>

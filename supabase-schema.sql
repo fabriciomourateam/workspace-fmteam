@@ -133,3 +133,7 @@ INSERT INTO processos (tarefa_id, titulo, descricao, tempo_estimado, frequencia,
 -- ALTER TABLE tarefas ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE agenda ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE processos ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para a tabela processos (permitir acesso total por enquanto)
+CREATE POLICY "Permitir acesso total aos processos" ON processos
+  FOR ALL USING (true) WITH CHECK (true);
