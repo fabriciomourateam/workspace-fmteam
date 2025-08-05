@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -32,12 +32,23 @@ function Cronograma() {
   const showError = (message) => alert('Erro: ' + message)
   
   // Estado para larguras das colunas redimensionáveis
-  const [columnWidths, setColumnWidths] = useState({})
+  const [columnWidths, setColumnWidths] = useState(() => {
+    // Carregar larguras salvas do localStorage
+    const saved = localStorage.getItem('cronograma-column-widths')
+    return saved ? JSON.parse(saved) : {}
+  })
   const [isResizing, setIsResizing] = useState(false)
   const [resizingColumn, setResizingColumn] = useState(null)
 
   // Hook de personalização
   const { getClassesDensidade, getCoresTema } = usePersonalizacao()
+
+  // Salvar larguras das colunas no localStorage sempre que mudarem
+  useEffect(() => {
+    if (Object.keys(columnWidths).length > 0) {
+      localStorage.setItem('cronograma-column-widths', JSON.stringify(columnWidths))
+    }
+  }, [columnWidths])
 
   // Funções para redimensionamento de colunas
   const handleMouseDown = (e, columnId) => {
@@ -50,10 +61,13 @@ function Cronograma() {
     
     const handleMouseMove = (e) => {
       const newWidth = Math.max(60, startWidth + (e.clientX - startX))
-      setColumnWidths(prev => ({
-        ...prev,
-        [columnId]: newWidth
-      }))
+      setColumnWidths(prev => {
+        const updated = {
+          ...prev,
+          [columnId]: newWidth
+        }
+        return updated
+      })
     }
     
     const handleMouseUp = () => {
@@ -69,6 +83,11 @@ function Cronograma() {
 
   const getColumnWidth = (columnId) => {
     return columnWidths[columnId] || 80
+  }
+
+  const resetColumnWidths = () => {
+    setColumnWidths({})
+    localStorage.removeItem('cronograma-column-widths')
   }
 
   // Carrega dados da API
@@ -184,20 +203,18 @@ function Cronograma() {
     return filtrados
   }, [agenda, funcionarioSelecionado, dataSelecionada])
 
-  // Horários únicos ordenados (baseado nos dados filtrados)
+  // Horários completos (8h às 22h) - sempre mostra todos os horários
   const horarios = useMemo(() => {
-    if (!dadosFiltrados || dadosFiltrados.length === 0) {
-      // Se não há dados filtrados, usar todos os horários da agenda para permitir adicionar tarefas
-      if (!agenda) return []
-      const horariosSet = new Set(agenda.filter(item => {
-        const itemData = item.data || new Date().toISOString().split('T')[0]
-        return itemData === dataSelecionada
-      }).map(item => item.horario))
-      return Array.from(horariosSet).sort()
+    const todosHorarios = []
+    for (let h = 8; h <= 22; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        const hora = h.toString().padStart(2, '0')
+        const minuto = m.toString().padStart(2, '0')
+        todosHorarios.push(`${hora}:${minuto}`)
+      }
     }
-    const horariosSet = new Set(dadosFiltrados.map(item => item.horario))
-    return Array.from(horariosSet).sort()
-  }, [dadosFiltrados, agenda, dataSelecionada])
+    return todosHorarios
+  }, [])
 
   // Organizar dados por funcionário e horário
   const cronogramaPorFuncionario = useMemo(() => {
@@ -766,6 +783,19 @@ function Cronograma() {
             </Button>
           ))}
         </div>
+        
+        {/* Botão para resetar larguras das colunas - só aparece na grade vertical e se houver larguras personalizadas */}
+        {visualizacao === 'grade-vertical' && Object.keys(columnWidths).length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetColumnWidths}
+            className="text-xs text-gray-600 hover:text-gray-800 border-gray-300 ml-2"
+            title="Resetar larguras das colunas para o padrão"
+          >
+            🔄 Resetar Colunas
+          </Button>
+        )}
       </div>
 
 

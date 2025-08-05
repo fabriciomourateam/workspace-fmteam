@@ -47,9 +47,9 @@ export default function AgendamentoForm({
     { id: 6, nome: 'Sábado', abrev: 'Sáb' }
   ]
 
-  // Gerar horários de 30 em 30 minutos
+  // Gerar horários de 30 em 30 minutos (8h às 22h)
   const horarios = []
-  for (let h = 8; h <= 18; h++) {
+  for (let h = 8; h <= 22; h++) {
     for (let m = 0; m < 60; m += 30) {
       const hora = h.toString().padStart(2, '0')
       const minuto = m.toString().padStart(2, '0')
@@ -322,7 +322,7 @@ export default function AgendamentoForm({
           {/* Seleção múltipla de horários */}
           <div className={getClassesDensidade('spacing')}>
             <Label className={getClassesDensidade('text')}>Horários ({formData.horarios.length} selecionado{formData.horarios.length !== 1 ? 's' : ''})</Label>
-            <div className={`max-h-40 overflow-y-auto border border-gray-300 rounded-md ${getClassesDensidade('card')}`}>
+            <div className="max-h-96 overflow-y-auto border border-gray-300 rounded-md p-3" style={{ minHeight: '200px' }}>
               <div className={`grid grid-cols-3 ${getClassesDensidade('gap')}`}>
                 {horarios.map(horario => (
                   <button
@@ -353,7 +353,7 @@ export default function AgendamentoForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setFormData(prev => ({ ...prev, horarios: horarios.filter(h => parseInt(h.split(':')[0]) >= 8 && parseInt(h.split(':')[0]) < 18) }))}
+                onClick={() => setFormData(prev => ({ ...prev, horarios: horarios.filter(h => parseInt(h.split(':')[0]) >= 8 && parseInt(h.split(':')[0]) <= 18) }))}
               >
                 Horário comercial
               </Button>
@@ -363,7 +363,7 @@ export default function AgendamentoForm({
           {/* Seleção múltipla de funcionários */}
           <div className={getClassesDensidade('spacing')}>
             <Label className={getClassesDensidade('text')}>Funcionários ({formData.funcionarios_ids.length} selecionado{formData.funcionarios_ids.length !== 1 ? 's' : ''})</Label>
-            <div className={`${getClassesDensidade('spacing')} max-h-40 overflow-y-auto border border-gray-300 rounded-md ${getClassesDensidade('card')}`}>
+            <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-300 rounded-md p-3" style={{ minHeight: '200px' }}>
               {funcionarios.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => (
                 <button
                   key={funcionario.id}
