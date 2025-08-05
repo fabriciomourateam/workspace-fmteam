@@ -17,11 +17,13 @@ import {
   Target,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  Star
 } from 'lucide-react'
 import { useFuncionarios, useTarefas, useDemandas } from '../hooks/useApi'
 import supabaseService from '../services/supabase'
 import DemandaForm from './forms/DemandaForm'
+import { usePersonalizacao } from '../hooks/usePersonalizacao'
 
 // Dados de exemplo - depois pode vir do Supabase
 const demandasExemplo = [
@@ -137,6 +139,9 @@ export default function DemandasImportantes() {
   // Usar dados do Supabase ou fallback para dados de exemplo
   // Se houver erro (tabela não existe), usar sempre os dados de exemplo
   const demandas = error ? demandasExemplo : (demandasData || demandasExemplo)
+
+  // Hook de personalização
+  const { getClassesDensidade, toggleFavorito, isFavorito } = usePersonalizacao()
 
   // Calcular dias restantes
   const calcularDiasRestantes = (prazo) => {
@@ -267,29 +272,29 @@ export default function DemandasImportantes() {
     const isUrgente = diasRestantes <= 2 && demanda.status !== 'concluida'
 
     return (
-      <Card className={`hover:shadow-lg transition-all duration-200 border-l-4 ${
+      <Card className={`hover:shadow-lg transition-all duration-200 border-l-4 min-h-[120px] overflow-hidden ${
         isAtrasada ? 'border-red-500 bg-red-50' : 
         isUrgente ? 'border-orange-500 bg-orange-50' : 
         importanciaInfo.borderColor
       }`}>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-4">
+        <CardContent className="p-3 h-full">
+          <div className="flex items-start justify-between gap-2 h-full">
             {/* Informações principais */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-2">
-                <IconeImportancia className={`w-4 h-4 ${importanciaInfo.textColor}`} />
-                <Badge variant="outline" className={`${importanciaInfo.color} text-white border-0 text-xs`}>
+            <div className="flex-1 min-w-0 max-w-[calc(100%-120px)] overflow-hidden">
+              <div className="flex items-center gap-2 mb-1">
+                <IconeImportancia className={`w-3 h-3 ${importanciaInfo.textColor}`} />
+                <Badge variant="outline" className={`${importanciaInfo.color} text-white border-0 text-xs px-1 py-0`}>
                   {importanciaInfo.label}
                 </Badge>
-                <Badge variant="outline" className={`${statusInfo.color} text-white border-0 text-xs`}>
-                  <IconeStatus className="w-3 h-3 mr-1" />
+                <Badge variant="outline" className={`${statusInfo.color} text-white border-0 text-xs px-1 py-0`}>
+                  <IconeStatus className="w-2 h-2 mr-1" />
                   {statusInfo.label}
                 </Badge>
                 
                 {/* Data de vencimento com destaque */}
-                <div className="flex items-center gap-1 ml-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className={`text-sm font-medium ${
+                <div className="flex items-center gap-1 ml-1">
+                  <Calendar className="w-3 h-3 text-gray-500" />
+                  <span className={`text-xs font-medium ${
                     isAtrasada ? 'text-red-600' : 
                     isUrgente ? 'text-orange-600' : 
                     'text-gray-700'
@@ -298,29 +303,29 @@ export default function DemandasImportantes() {
                   </span>
                   {isAtrasada && (
                     <span className="text-xs text-red-600 font-semibold">
-                      ({Math.abs(diasRestantes)} dias atrasada)
+                      ({Math.abs(diasRestantes)}d atraso)
                     </span>
                   )}
                   {isUrgente && !isAtrasada && (
                     <span className="text-xs text-orange-600 font-semibold">
-                      ({diasRestantes} dias restantes)
+                      ({diasRestantes}d restantes)
                     </span>
                   )}
                 </div>
               </div>
               
-              <div className="mt-2">
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              <div className="mt-1">
+                <h3 className="text-sm font-semibold text-gray-900 mb-1 leading-tight break-words line-clamp-2">
                   {demanda.titulo}
                 </h3>
-                <p className="text-sm text-gray-600 line-clamp-1">
+                <p className="text-xs text-gray-600 line-clamp-2 opacity-75">
                   {demanda.descricao}
                 </p>
                 
                 {/* Informações adicionais */}
-                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                   <div className="flex items-center gap-1">
-                    <User className="w-3 h-3" />
+                    <User className="w-2 h-2" />
                     <span>{funcionario?.nome || 'Não atribuído'}</span>
                   </div>
                   {tarefa && (
@@ -334,35 +339,52 @@ export default function DemandasImportantes() {
             </div>
 
             {/* Botões de ação */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-shrink-0 w-[110px] justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleFavorito({
+                    id: demanda.id,
+                    nome: demanda.titulo,
+                    tipo: 'demanda'
+                  })
+                }}
+                className="h-6 w-6 p-0"
+                title={isFavorito(demanda.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+              >
+                <Star className={`w-3 h-3 ${isFavorito(demanda.id) ? 'favorito-star' : 'text-gray-400'}`} />
+              </Button>
+              
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleViewDemanda(demanda)}
-                className="h-8 w-8 p-0"
+                className="h-6 w-6 p-0"
                 title="Visualizar detalhes"
               >
-                <Eye className="w-4 h-4" />
+                <Eye className="w-3 h-3" />
               </Button>
               
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleEditDemanda(demanda)}
-                className="h-8 w-8 p-0"
+                className="h-6 w-6 p-0"
                 title="Editar demanda"
               >
-                <Edit className="w-4 h-4" />
+                <Edit className="w-3 h-3" />
               </Button>
               
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleDeleteDemanda(demanda)}
-                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                 title="Excluir demanda"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3 h-3" />
               </Button>
               
               {/* Seletor de status rápido */}
@@ -371,7 +393,7 @@ export default function DemandasImportantes() {
                   value={demanda.status}
                   onValueChange={(value) => handleStatusChange(demanda.id, value)}
                 >
-                  <SelectTrigger className="h-8 w-24 text-xs ml-2">
+                  <SelectTrigger className="h-6 w-20 text-xs ml-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -553,7 +575,7 @@ export default function DemandasImportantes() {
       </Card>
 
       {/* Lista de Demandas */}
-      <div className="space-y-4">
+      <div className={getClassesDensidade('spacing')}>
         {demandasOrdenadas.map(demanda => (
           <DemandaCard key={demanda.id} demanda={demanda} />
         ))}

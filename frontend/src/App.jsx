@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // import ThemeToggle from './components/ThemeToggle'
 // import NotificationContainer from './components/NotificationContainer'
 // import GlobalSearch from './components/GlobalSearch'
+import { UserPreferencesProvider } from './contexts/UserPreferencesContext'
+import ConfiguracoesPessoais from './components/ConfiguracoesPessoais'
 import Dashboard from './components/DashboardNew'
 import DashboardAvancado from './components/DashboardAvancado'
 import MetasKPIs from './components/MetasKPIs'
@@ -24,12 +26,14 @@ import { useFuncionarios, useAgenda } from './hooks/useApi'
 import { ApiStatus } from './components/ApiStatus'
 import './App.css'
 import './styles/animations.css'
+import './styles/themes.css'
 
 function Navigation() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [configOpen, setConfigOpen] = useState(false)
   
   // Carrega dados da API para os badges
   const { data: funcionarios } = useFuncionarios()
@@ -210,6 +214,17 @@ function Navigation() {
               <Search className="w-4 h-4" />
             </Button>
             
+            {/* Configurações Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setConfigOpen(true)}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              title="Configurações Pessoais"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+            
             {/* Menu Mobile - apenas mobile */}
             <div className="md:hidden">
               <Button
@@ -308,6 +323,12 @@ function Navigation() {
         onClose={() => setSearchOpen(false)}
         onNavigate={handleSearchNavigate}
       /> */}
+      
+      {/* Modal de Configurações */}
+      <ConfiguracoesPessoais 
+        isOpen={configOpen}
+        onClose={() => setConfigOpen(false)}
+      />
     </>
   )
 }
@@ -343,7 +364,9 @@ function AppContent() {
 
 function App() {
   return (
-    <AppContent />
+    <UserPreferencesProvider>
+      <AppContent />
+    </UserPreferencesProvider>
   )
 }
 

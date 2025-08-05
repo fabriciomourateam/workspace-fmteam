@@ -1,0 +1,172 @@
+/* Variáveis CSS para temas personalizáveis */
+:root {
+  --color-primary: rgb(37, 99, 235);
+  --color-primary-hover: rgb(29, 78, 216);
+  --color-secondary: rgb(99, 102, 241);
+  --color-accent: rgb(59, 130, 246);
+  --color-success: rgb(34, 197, 94);
+  --color-warning: rgb(245, 158, 11);
+  --color-error: rgb(239, 68, 68);
+  --color-background: rgb(248, 250, 252);
+  --color-surface: rgb(255, 255, 255);
+  --color-text: rgb(15, 23, 42);
+}
+
+/* Classes utilitárias para temas */
+.theme-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.theme-primary:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.theme-primary-outline {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background-color: transparent;
+}
+
+.theme-primary-outline:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.theme-secondary {
+  background-color: var(--color-secondary);
+  color: white;
+}
+
+.theme-accent {
+  background-color: var(--color-accent);
+  color: white;
+}
+
+.theme-success {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.theme-warning {
+  background-color: var(--color-warning);
+  color: white;
+}
+
+.theme-error {
+  background-color: var(--color-error);
+  color: white;
+}
+
+.theme-surface {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.theme-background {
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+/* Classes para densidade */
+.densidade-compacta {
+  --card-height: 2rem; /* h-8 */
+  --card-padding: 0.25rem; /* p-1 */
+  --font-size: 0.75rem; /* text-xs */
+  --spacing: 0.25rem; /* space-y-1 */
+  --gap: 0.25rem; /* gap-1 */
+}
+
+.densidade-normal {
+  --card-height: 2.5rem; /* h-10 */
+  --card-padding: 0.5rem; /* p-2 */
+  --font-size: 0.875rem; /* text-sm */
+  --spacing: 0.5rem; /* space-y-2 */
+  --gap: 0.5rem; /* gap-2 */
+}
+
+.densidade-confortavel {
+  --card-height: 3rem; /* h-12 */
+  --card-padding: 0.75rem; /* p-3 */
+  --font-size: 1rem; /* text-base */
+  --spacing: 0.75rem; /* space-y-3 */
+  --gap: 0.75rem; /* gap-3 */
+}
+
+/* Animações suaves para mudanças de tema */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Botões com tema personalizado */
+.btn-theme-primary {
+  background-color: var(--color-primary);
+  color: white;
+  border: 1px solid var(--color-primary);
+}
+
+.btn-theme-primary:hover {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.btn-theme-outline {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.btn-theme-outline:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* Cards com tema personalizado */
+.card-theme {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Badges com tema personalizado */
+.badge-theme-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.badge-theme-success {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.badge-theme-warning {
+  background-color: var(--color-warning);
+  color: white;
+}
+
+.badge-theme-error {
+  background-color: var(--color-error);
+  color: white;
+}
+
+/* Favoritos */
+.favorito-star {
+  color: var(--color-warning);
+  fill: var(--color-warning);
+}
+
+.favorito-star:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+/* Bookmarks */
+.bookmark-icon {
+  color: var(--color-primary);
+  fill: var(--color-primary);
+}
+
+.bookmark-icon:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}

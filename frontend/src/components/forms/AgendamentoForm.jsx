@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { usePersonalizacao } from '../../hooks/usePersonalizacao'
 // import { useNotifications } from '../../contexts/NotificationContext'
 
 export default function AgendamentoForm({ 
@@ -20,6 +21,9 @@ export default function AgendamentoForm({
   const showSuccess = (message) => console.log('Sucesso:', message)
   const showError = (message) => console.error('Erro:', message)
   const [loading, setLoading] = useState(false)
+  
+  // Hook de personalização
+  const { getClassesDensidade } = usePersonalizacao()
   
   const [formData, setFormData] = useState({
     horarios: agendamento?.horario ? [agendamento.horario] : (horarioInicial ? [horarioInicial] : []),
@@ -213,12 +217,12 @@ export default function AgendamentoForm({
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className={getClassesDensidade('spacing')}>
           {/* Tipo de agendamento */}
-          <div className="space-y-2">
-            <Label>Tipo de Agendamento</Label>
-            <div className="flex gap-4">
-              <label className="flex items-center space-x-2">
+          <div className={getClassesDensidade('spacing')}>
+            <Label className={getClassesDensidade('text')}>Tipo de Agendamento</Label>
+            <div className={`flex ${getClassesDensidade('gap')}`}>
+              <label className={`flex items-center ${getClassesDensidade('gap')}`}>
                 <input
                   type="radio"
                   value="unico"
@@ -226,9 +230,9 @@ export default function AgendamentoForm({
                   onChange={(e) => setTipoAgendamento(e.target.value)}
                   className="text-blue-600"
                 />
-                <span>Agendamento único</span>
+                <span className={getClassesDensidade('text')}>Agendamento único</span>
               </label>
-              <label className="flex items-center space-x-2">
+              <label className={`flex items-center ${getClassesDensidade('gap')}`}>
                 <input
                   type="radio"
                   value="recorrente"
@@ -236,21 +240,21 @@ export default function AgendamentoForm({
                   onChange={(e) => setTipoAgendamento(e.target.value)}
                   className="text-blue-600"
                 />
-                <span>Agendamento recorrente</span>
+                <span className={getClassesDensidade('text')}>Agendamento recorrente</span>
               </label>
             </div>
           </div>
 
           {/* Data única */}
           {tipoAgendamento === 'unico' && (
-            <div className="space-y-2">
-              <Label htmlFor="data">Data</Label>
+            <div className={getClassesDensidade('spacing')}>
+              <Label htmlFor="data" className={getClassesDensidade('text')}>Data</Label>
               <input
                 id="data"
                 type="date"
                 value={formData.data}
                 onChange={(e) => handleChange('data', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full ${getClassesDensidade('card')} border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
             </div>
@@ -316,16 +320,16 @@ export default function AgendamentoForm({
           )}
 
           {/* Seleção múltipla de horários */}
-          <div className="space-y-2">
-            <Label>Horários ({formData.horarios.length} selecionado{formData.horarios.length !== 1 ? 's' : ''})</Label>
-            <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
-              <div className="grid grid-cols-3 gap-2">
+          <div className={getClassesDensidade('spacing')}>
+            <Label className={getClassesDensidade('text')}>Horários ({formData.horarios.length} selecionado{formData.horarios.length !== 1 ? 's' : ''})</Label>
+            <div className={`max-h-40 overflow-y-auto border border-gray-300 rounded-md ${getClassesDensidade('card')}`}>
+              <div className={`grid grid-cols-3 ${getClassesDensidade('gap')}`}>
                 {horarios.map(horario => (
                   <button
                     key={horario}
                     type="button"
                     onClick={() => toggleHorario(horario)}
-                    className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
+                    className={`${getClassesDensidade('card')} rounded ${getClassesDensidade('text')} font-medium transition-colors ${
                       formData.horarios.includes(horario)
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -357,15 +361,15 @@ export default function AgendamentoForm({
           </div>
 
           {/* Seleção múltipla de funcionários */}
-          <div className="space-y-2">
-            <Label>Funcionários ({formData.funcionarios_ids.length} selecionado{formData.funcionarios_ids.length !== 1 ? 's' : ''})</Label>
-            <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
+          <div className={getClassesDensidade('spacing')}>
+            <Label className={getClassesDensidade('text')}>Funcionários ({formData.funcionarios_ids.length} selecionado{formData.funcionarios_ids.length !== 1 ? 's' : ''})</Label>
+            <div className={`${getClassesDensidade('spacing')} max-h-40 overflow-y-auto border border-gray-300 rounded-md ${getClassesDensidade('card')}`}>
               {funcionarios.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => (
                 <button
                   key={funcionario.id}
                   type="button"
                   onClick={() => toggleFuncionario(funcionario.id)}
-                  className={`w-full flex items-center space-x-3 p-2 rounded-md text-left transition-colors ${
+                  className={`w-full flex items-center ${getClassesDensidade('gap')} ${getClassesDensidade('card')} rounded-md text-left transition-colors ${
                     formData.funcionarios_ids.includes(funcionario.id)
                       ? 'bg-blue-50 border-2 border-blue-500'
                       : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
@@ -375,9 +379,9 @@ export default function AgendamentoForm({
                     className="w-4 h-4 rounded-full flex-shrink-0"
                     style={{ backgroundColor: funcionario.cor }}
                   />
-                  <span className="font-medium">{funcionario.nome}</span>
+                  <span className={`font-medium ${getClassesDensidade('text')}`}>{funcionario.nome}</span>
                   {formData.funcionarios_ids.includes(funcionario.id) && (
-                    <span className="ml-auto text-blue-600 text-sm">✓</span>
+                    <span className={`ml-auto text-blue-600 ${getClassesDensidade('text')}`}>✓</span>
                   )}
                 </button>
               ))}
@@ -405,18 +409,18 @@ export default function AgendamentoForm({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tarefa">Tarefa</Label>
+          <div className={getClassesDensidade('spacing')}>
+            <Label htmlFor="tarefa" className={getClassesDensidade('text')}>Tarefa</Label>
             <Select value={formData.tarefa_id} onValueChange={(value) => handleChange('tarefa_id', value)}>
-              <SelectTrigger>
+              <SelectTrigger className={getClassesDensidade('card')}>
                 <SelectValue placeholder="Selecione a tarefa" />
               </SelectTrigger>
               <SelectContent>
                 {tarefas.filter(tarefa => tarefa.id && tarefa.id.trim() !== '').map(tarefa => (
                   <SelectItem key={tarefa.id} value={tarefa.id}>
                     <div className="flex flex-col">
-                      <span className="font-medium">{tarefa.nome}</span>
-                      <span className="text-xs text-gray-500">
+                      <span className={`font-medium ${getClassesDensidade('text')}`}>{tarefa.nome}</span>
+                      <span className={`${getClassesDensidade('text')} text-gray-500 opacity-75`}>
                         30min - {tarefa.categoria}
                       </span>
                     </div>
@@ -428,9 +432,9 @@ export default function AgendamentoForm({
 
           {/* Resumo das combinações */}
           {!agendamento && formData.funcionarios_ids.length > 0 && formData.horarios.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <h4 className="font-medium text-blue-900 mb-2">Resumo do Agendamento</h4>
-              <div className="text-sm text-blue-800">
+            <div className={`bg-blue-50 border border-blue-200 rounded-lg ${getClassesDensidade('card')}`}>
+              <h4 className={`font-medium text-blue-900 ${getClassesDensidade('text')} mb-2`}>Resumo do Agendamento</h4>
+              <div className={`${getClassesDensidade('text')} text-blue-800`}>
                 {tipoAgendamento === 'recorrente' ? (
                   <div>
                     <p><strong>Funcionários:</strong> {formData.funcionarios_ids.length}</p>
