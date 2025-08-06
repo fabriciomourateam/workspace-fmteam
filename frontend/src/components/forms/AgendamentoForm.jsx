@@ -47,13 +47,16 @@ export default function AgendamentoForm({
     { id: 6, nome: 'Sábado', abrev: 'Sáb' }
   ]
 
-  // Gerar horários de 30 em 30 minutos (8h às 22h)
+  // Gerar horários de 30 em 30 minutos (8h às 19h30)
   const horarios = []
-  for (let h = 8; h <= 22; h++) {
+  for (let h = 8; h <= 19; h++) {
     for (let m = 0; m < 60; m += 30) {
       const hora = h.toString().padStart(2, '0')
       const minuto = m.toString().padStart(2, '0')
       horarios.push(`${hora}:${minuto}`)
+      
+      // Para a hora 19, só adiciona até 19:30 (para de adicionar depois do 19:30)
+      if (h === 19 && m === 30) break
     }
   }
 
@@ -355,7 +358,7 @@ export default function AgendamentoForm({
                 size="sm"
                 onClick={() => setFormData(prev => ({ ...prev, horarios: horarios.filter(h => parseInt(h.split(':')[0]) >= 8 && parseInt(h.split(':')[0]) <= 18) }))}
               >
-                Horário comercial
+                Horário comercial (8h-18h)
               </Button>
             </div>
           </div>

@@ -91,6 +91,11 @@ class SupabaseService {
 
   // Agenda
   async getAgenda() {
+    // Buscar apenas os últimos 30 dias para otimizar a consulta
+    const dataLimite = new Date()
+    dataLimite.setDate(dataLimite.getDate() - 30)
+    const dataLimiteStr = dataLimite.toISOString().split('T')[0]
+
     const { data, error } = await supabase
       .from('agenda')
       .select(`
@@ -98,7 +103,10 @@ class SupabaseService {
         funcionario:funcionarios(nome, cor),
         tarefa:tarefas(nome, categoria)
       `)
+      .gte('data', dataLimiteStr) // Filtrar apenas últimos 30 dias
+      .order('data', { ascending: false })
       .order('horario')
+      .limit(10000) // Aumentar o limite para garantir que todos os dados sejam carregados
 
     if (error) throw error
     return data
@@ -148,7 +156,7 @@ class SupabaseService {
   // Exclusão por filtros
   async deleteAgendamentosByFilter(filters) {
     let query = supabase.from('agenda').delete()
-    
+
     if (filters.funcionario_id && filters.funcionario_id !== 'todos') {
       query = query.eq('funcionario_id', filters.funcionario_id)
     }
@@ -182,7 +190,7 @@ class SupabaseService {
   // Exclusão por filtros
   async deleteAgendamentosByFilter(filters) {
     let query = supabase.from('agenda').delete()
-    
+
     if (filters.funcionario_id) {
       query = query.eq('funcionario_id', filters.funcionario_id)
     }
@@ -200,6 +208,24 @@ class SupabaseService {
 
     if (error) throw error
     return { deleted: count }
+  }
+
+  // Agenda de hoje (otimizada)
+  async getAgendaHoje() {
+    const hoje = new Date().toISOString().split('T')[0]
+
+    const { data, error } = await supabase
+      .from('agenda')
+      .select(`
+        *,
+        funcionario:funcionarios(nome, cor),
+        tarefa:tarefas(nome, categoria)
+      `)
+      .eq('data', hoje)
+      .order('horario')
+
+    if (error) throw error
+    return data
   }
 
   // Agenda por funcionário
@@ -261,7 +287,7 @@ class SupabaseService {
     if (funcionarioId) {
       query = query.eq('funcionario_id', funcionarioId)
     }
-    
+
     if (tipo) {
       query = query.eq('tipo', tipo)
     }
@@ -314,18 +340,18 @@ class SupabaseService {
     if (funcionarioId) {
       query = query.eq('funcionario_id', funcionarioId)
     }
-    
+
     if (dataInicio) {
       query = query.gte('data', dataInicio)
     }
-    
+
     if (dataFim) {
       query = query.lte('data', dataFim)
     }
 
     const { data, error } = await query
     if (error) throw error
-    
+
     // Processar estatísticas
     const stats = {
       totalTarefas: data.length,
@@ -341,14 +367,14 @@ class SupabaseService {
         'atrasada': data.filter(t => t.status === 'atrasada').length
       }
     }
-    
+
     // Calcular eficiência média
     const tarefasComTempo = data.filter(t => t.tempo_real && t.tarefa?.tempo_estimado)
     if (tarefasComTempo.length > 0) {
       const eficiencias = tarefasComTempo.map(t => (t.tarefa.tempo_estimado / t.tempo_real) * 100)
       stats.eficienciaMedia = eficiencias.reduce((acc, eff) => acc + eff, 0) / eficiencias.length
     }
-    
+
     return { data, stats }
   }
 

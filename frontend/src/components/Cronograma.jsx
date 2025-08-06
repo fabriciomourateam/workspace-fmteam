@@ -203,14 +203,17 @@ function Cronograma() {
     return filtrados
   }, [agenda, funcionarioSelecionado, dataSelecionada])
 
-  // Horários completos (8h às 22h) - sempre mostra todos os horários
+  // Horários de 8h às 19h30 (finalizando no horário das 19h30 às 20h)
   const horarios = useMemo(() => {
     const todosHorarios = []
-    for (let h = 8; h <= 22; h++) {
+    for (let h = 8; h <= 19; h++) {
       for (let m = 0; m < 60; m += 30) {
         const hora = h.toString().padStart(2, '0')
         const minuto = m.toString().padStart(2, '0')
         todosHorarios.push(`${hora}:${minuto}`)
+        
+        // Para a hora 19, só adiciona até 19:30 (para de adicionar depois do 19:30)
+        if (h === 19 && m === 30) break
       }
     }
     return todosHorarios
@@ -292,6 +295,13 @@ function Cronograma() {
           isCompleted ? 'opacity-75 ring-1 ring-green-400' : ''
         }`}
         onClick={() => handleEditAgendamento(tarefa)}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          if (window.confirm(`Deseja excluir o agendamento "${tarefa.tarefaInfo?.nome || tarefa.tarefa}" às ${tarefa.horario}?`)) {
+            handleDeleteAgendamento(tarefa)
+          }
+        }}
+        title="Clique para editar • Clique direito para excluir"
       >
         {/* Checkbox */}
         <button
@@ -307,7 +317,7 @@ function Cronograma() {
         </button>
 
         {/* Conteúdo da tarefa */}
-        <div className="ml-4 pr-4">
+        <div className="ml-4 pr-6">
           <div className={`font-medium leading-tight break-words ${isCompleted ? 'line-through' : ''}`}>
             {tarefa.tarefaInfo?.nome || tarefa.tarefa}
           </div>
@@ -316,17 +326,22 @@ function Cronograma() {
           </div>
         </div>
         
-        {/* Botão de deletar */}
-        <button
-          className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-3 h-3 flex items-center justify-center text-xs transition-opacity"
-          onClick={(e) => {
-            e.stopPropagation()
-            handleDeleteAgendamento(tarefa)
-          }}
-          title="Deletar agendamento"
-        >
-          ×
-        </button>
+        {/* Botões de ação */}
+        <div className="absolute top-0.5 right-0.5 flex gap-0.5">
+          {/* Botão de deletar - mais visível */}
+          <button
+            className="opacity-70 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs transition-all hover:scale-110"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (window.confirm(`Deseja excluir o agendamento "${tarefa.tarefaInfo?.nome || tarefa.tarefa}" às ${tarefa.horario}?`)) {
+                handleDeleteAgendamento(tarefa)
+              }
+            }}
+            title="Excluir agendamento"
+          >
+            ×
+          </button>
+        </div>
       </div>
     )
   }
@@ -362,7 +377,7 @@ function Cronograma() {
                   <div className="text-xs font-medium text-gray-600 text-center leading-tight">
                     {formatarHorarioIntervalo(horario)}
                   </div>
-                  <div className={`p-1 rounded text-white text-xs min-h-8 ${
+                  <div className={`p-1 rounded text-white text-xs min-h-8 relative group ${
                     funcionario.tarefas[horario] 
                       ? categoriasCores[funcionario.tarefas[horario].tarefaInfo?.categoria] || 'bg-gray-500'
                       : 'bg-gray-100 dark:bg-gray-700 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -374,14 +389,58 @@ function Cronograma() {
                   title={funcionario.tarefas[horario] ? "Clique para editar" : "Clique para adicionar tarefa"}
                   >
                     {funcionario.tarefas[horario] ? (
-                      <div className="w-full">
-                        <div className="font-medium leading-tight break-words">
-                          {funcionario.tarefas[horario].tarefaInfo?.nome}
+                      <>
+                        {/* Checkbox de conclusão */}
+                        <button
+                          className={`absolute top-0.5 left-0.5 w-3 h-3 rounded border flex items-center justify-center transition-all z-10 ${
+                            funcionario.tarefas[horario].status === 'concluida'
+                              ? 'bg-green-500 border-green-500 text-white' 
+                              : 'border-white/50 hover:border-white hover:bg-white/20'
+                          }`}
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            try {
+                              const isCompleted = funcionario.tarefas[horario].status === 'concluida'
+                              const novoStatus = isCompleted ? 'nao_iniciada' : 'concluida'
+                              const agora = new Date()
+                              
+                              await supabaseService.updateAgendamento(funcionario.tarefas[horario].id, {
+                                status: novoStatus,
+                                tempo_fim: novoStatus === 'concluida' ? agora.toISOString() : null,
+                                tempo_real: novoStatus === 'concluida' ? (funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30) : null
+                              })
+                              
+                              refetchAgenda()
+                            } catch (error) {
+                              console.error('Erro ao atualizar tarefa:', error)
+                            }
+                          }}
+                          title={funcionario.tarefas[horario].status === 'concluida' ? 'Marcar como pendente' : 'Marcar como concluída'}
+                        >
+                          {funcionario.tarefas[horario].status === 'concluida' && <span className="text-xs">✓</span>}
+                        </button>
+
+                        <div className={`w-full ml-4 pr-4 ${funcionario.tarefas[horario].status === 'concluida' ? 'opacity-75' : ''}`}>
+                          <div className={`font-medium leading-tight break-words ${funcionario.tarefas[horario].status === 'concluida' ? 'line-through' : ''}`}>
+                            {funcionario.tarefas[horario].tarefaInfo?.nome}
+                          </div>
+                          <div className="text-xs opacity-75">
+                            {funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30}min
+                          </div>
                         </div>
-                        <div className="text-xs opacity-75">
-                          {funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30}min
-                        </div>
-                      </div>
+                        
+                        {/* Botão de exclusão */}
+                        <button
+                          className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs transition-opacity z-10"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteAgendamento(funcionario.tarefas[horario])
+                          }}
+                          title="Excluir agendamento"
+                        >
+                          ×
+                        </button>
+                      </>
                     ) : (
                       <span className="text-gray-400">+</span>
                     )}
@@ -435,16 +494,79 @@ function Cronograma() {
                   {horarios.map(horario => (
                     <td key={horario} className="border border-gray-200 p-1">
                       {funcionario.tarefas[horario] ? (
-                        <div className={`p-1 rounded text-white text-xs min-h-8 ${categoriasCores[funcionario.tarefas[horario].tarefaInfo?.categoria] || 'bg-gray-500'}`}>
-                          <div className="font-medium leading-tight break-words">
-                            {funcionario.tarefas[horario].tarefaInfo?.nome}
+                        <div 
+                          className={`p-1 rounded text-white text-xs min-h-8 cursor-pointer group relative ${
+                            funcionario.tarefas[horario].status === 'concluida' ? 'opacity-75 ring-1 ring-green-400' : ''
+                          } ${categoriasCores[funcionario.tarefas[horario].tarefaInfo?.categoria] || 'bg-gray-500'}`}
+                          onClick={() => handleEditAgendamento(funcionario.tarefas[horario])}
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            if (window.confirm(`Deseja excluir o agendamento "${funcionario.tarefas[horario].tarefaInfo?.nome}" às ${horario}?`)) {
+                              handleDeleteAgendamento(funcionario.tarefas[horario])
+                            }
+                          }}
+                          title="Clique para editar • Clique direito para excluir"
+                        >
+                          {/* Checkbox de conclusão */}
+                          <button
+                            className={`absolute top-0.5 left-0.5 w-3 h-3 rounded border flex items-center justify-center transition-all z-10 ${
+                              funcionario.tarefas[horario].status === 'concluida'
+                                ? 'bg-green-500 border-green-500 text-white' 
+                                : 'border-white/50 hover:border-white hover:bg-white/20'
+                            }`}
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              try {
+                                const isCompleted = funcionario.tarefas[horario].status === 'concluida'
+                                const novoStatus = isCompleted ? 'nao_iniciada' : 'concluida'
+                                const agora = new Date()
+                                
+                                await supabaseService.updateAgendamento(funcionario.tarefas[horario].id, {
+                                  status: novoStatus,
+                                  tempo_fim: novoStatus === 'concluida' ? agora.toISOString() : null,
+                                  tempo_real: novoStatus === 'concluida' ? (funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30) : null
+                                })
+                                
+                                refetchAgenda()
+                              } catch (error) {
+                                console.error('Erro ao atualizar tarefa:', error)
+                              }
+                            }}
+                            title={funcionario.tarefas[horario].status === 'concluida' ? 'Marcar como pendente' : 'Marcar como concluída'}
+                          >
+                            {funcionario.tarefas[horario].status === 'concluida' && <span className="text-xs">✓</span>}
+                          </button>
+
+                          <div className={`ml-4 pr-4 ${funcionario.tarefas[horario].status === 'concluida' ? 'line-through' : ''}`}>
+                            <div className="font-medium leading-tight break-words">
+                              {funcionario.tarefas[horario].tarefaInfo?.nome}
+                            </div>
+                            <div className="text-xs opacity-75">
+                              {funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30}min
+                            </div>
                           </div>
-                          <div className="text-xs opacity-75">
-                            {funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30}min
-                          </div>
+                          {/* Botão de deletar */}
+                          <button
+                            className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-3 h-3 flex items-center justify-center text-xs transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (window.confirm(`Deseja excluir o agendamento "${funcionario.tarefas[horario].tarefaInfo?.nome}" às ${horario}?`)) {
+                                handleDeleteAgendamento(funcionario.tarefas[horario])
+                              }
+                            }}
+                            title="Excluir agendamento"
+                          >
+                            ×
+                          </button>
                         </div>
                       ) : (
-                        <div className="text-gray-400 text-xs text-center h-8 flex items-center justify-center">-</div>
+                        <div 
+                          className="text-gray-400 text-xs text-center h-8 flex items-center justify-center cursor-pointer hover:bg-gray-100 rounded"
+                          onClick={() => handleAddAgendamento(horario, funcionario.id)}
+                          title="Clique para adicionar tarefa"
+                        >
+                          +
+                        </div>
                       )}
                     </td>
                   ))}
@@ -516,19 +638,69 @@ function Cronograma() {
                       style={{ width: `${getColumnWidth(funcionario.id)}px` }}
                     >
                       {funcionario.tarefas[horario] ? (
-                        <div className={`p-1 rounded text-white text-xs min-h-8 ${categoriasCores[funcionario.tarefas[horario].tarefaInfo?.categoria] || 'bg-gray-500'}`}>
-                          <div className="font-medium leading-tight break-words whitespace-pre-line text-xs">
-                            {funcionario.tarefas[horario].tarefaInfo?.nome?.split(' ').map((palavra, index, array) => {
-                              // Quebra linha a cada 2-3 palavras para textos longos
-                              if (array.length > 3 && (index === 1 || index === 3)) {
-                                return palavra + '\n'
+                        <div 
+                          className={`p-1 rounded text-white text-xs min-h-8 cursor-pointer group relative ${
+                            funcionario.tarefas[horario].status === 'concluida' ? 'opacity-75 ring-1 ring-green-400' : ''
+                          } ${categoriasCores[funcionario.tarefas[horario].tarefaInfo?.categoria] || 'bg-gray-500'}`}
+                          onClick={() => handleEditAgendamento(funcionario.tarefas[horario])}
+                          title="Clique para editar"
+                        >
+                          {/* Checkbox de conclusão */}
+                          <button
+                            className={`absolute top-0.5 left-0.5 w-3 h-3 rounded border flex items-center justify-center transition-all z-10 ${
+                              funcionario.tarefas[horario].status === 'concluida'
+                                ? 'bg-green-500 border-green-500 text-white' 
+                                : 'border-white/50 hover:border-white hover:bg-white/20'
+                            }`}
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              try {
+                                const isCompleted = funcionario.tarefas[horario].status === 'concluida'
+                                const novoStatus = isCompleted ? 'nao_iniciada' : 'concluida'
+                                const agora = new Date()
+                                
+                                await supabaseService.updateAgendamento(funcionario.tarefas[horario].id, {
+                                  status: novoStatus,
+                                  tempo_fim: novoStatus === 'concluida' ? agora.toISOString() : null,
+                                  tempo_real: novoStatus === 'concluida' ? (funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30) : null
+                                })
+                                
+                                refetchAgenda()
+                              } catch (error) {
+                                console.error('Erro ao atualizar tarefa:', error)
                               }
-                              return palavra + (index < array.length - 1 ? ' ' : '')
-                            }).join('')}
+                            }}
+                            title={funcionario.tarefas[horario].status === 'concluida' ? 'Marcar como pendente' : 'Marcar como concluída'}
+                          >
+                            {funcionario.tarefas[horario].status === 'concluida' && <span className="text-xs">✓</span>}
+                          </button>
+
+                          <div className={`ml-4 pr-4 ${funcionario.tarefas[horario].status === 'concluida' ? 'line-through' : ''}`}>
+                            <div className="font-medium leading-tight break-words whitespace-pre-line text-xs">
+                              {funcionario.tarefas[horario].tarefaInfo?.nome?.split(' ').map((palavra, index, array) => {
+                                // Quebra linha a cada 2-3 palavras para textos longos
+                                if (array.length > 3 && (index === 1 || index === 3)) {
+                                  return palavra + '\n'
+                                }
+                                return palavra + (index < array.length - 1 ? ' ' : '')
+                              }).join('')}
+                            </div>
+                            <div className="text-xs opacity-75">
+                              {funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30}min
+                            </div>
                           </div>
-                          <div className="text-xs opacity-75">
-                            {funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30}min
-                          </div>
+                          
+                          {/* Botão de exclusão */}
+                          <button
+                            className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-3 h-3 flex items-center justify-center text-xs transition-opacity z-10"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteAgendamento(funcionario.tarefas[horario])
+                            }}
+                            title="Excluir agendamento"
+                          >
+                            ×
+                          </button>
                         </div>
                       ) : (
                         <div className="text-gray-400 text-xs text-center h-8 flex items-center justify-center">-</div>

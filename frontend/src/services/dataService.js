@@ -137,8 +137,16 @@ class DataService {
   async getAgenda() {
     if (this.isSupabaseEnabled) {
       try {
-        const data = await supabaseService.getAgenda();
+        // Buscar dados de hoje + dados recentes
+        const [agendaHoje, agendaRecente] = await Promise.all([
+          supabaseService.getAgendaHoje(),
+          supabaseService.getAgenda()
+        ]);
         
+        // Combinar e remover duplicatas
+        const idsHoje = new Set(agendaHoje.map(item => item.id));
+        const agendaFiltrada = agendaRecente.filter(item => !idsHoje.has(item.id));
+        const data = [...agendaHoje, ...agendaFiltrada];
         // Transformar dados do Supabase para formato esperado
         const transformedData = data.map(item => ({
           id: item.id,
