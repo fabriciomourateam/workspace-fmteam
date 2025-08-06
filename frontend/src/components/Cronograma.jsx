@@ -3,11 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Clock, User, Users, Filter, Calendar } from 'lucide-react'
+import { Clock, User, Users, Filter, Calendar, ChevronLeft, ChevronRight, Grid3X3, List, BarChart3, CheckCircle2 } from 'lucide-react'
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
-// import { useNotifications } from '../contexts/NotificationContext'
 import AgendamentoForm from './forms/AgendamentoForm'
 import supabaseService from '../services/supabase'
 import { formatarHorarioIntervalo } from '../utils/timeUtils'
@@ -25,15 +24,14 @@ const categoriasCores = {
 
 function Cronograma() {
   const [funcionarioSelecionado, setFuncionarioSelecionado] = useState('todos')
-  const [visualizacao, setVisualizacao] = useState('timeline') // timeline ou grade
+  const [visualizacao, setVisualizacao] = useState('timeline')
   const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0])
-  // const { showSuccess, showError } = useNotifications()
+  
   const showSuccess = (message) => alert('Sucesso: ' + message)
   const showError = (message) => alert('Erro: ' + message)
   
   // Estado para larguras das colunas redimensionáveis
   const [columnWidths, setColumnWidths] = useState(() => {
-    // Carregar larguras salvas do localStorage
     const saved = localStorage.getItem('cronograma-column-widths')
     return saved ? JSON.parse(saved) : {}
   })
@@ -43,7 +41,7 @@ function Cronograma() {
   // Hook de personalização
   const { getClassesDensidade, getCoresTema } = usePersonalizacao()
 
-  // Salvar larguras das colunas no localStorage sempre que mudarem
+  // Salvar larguras das colunas no localStorage
   useEffect(() => {
     if (Object.keys(columnWidths).length > 0) {
       localStorage.setItem('cronograma-column-widths', JSON.stringify(columnWidths))
@@ -61,13 +59,10 @@ function Cronograma() {
     
     const handleMouseMove = (e) => {
       const newWidth = Math.max(60, startWidth + (e.clientX - startX))
-      setColumnWidths(prev => {
-        const updated = {
-          ...prev,
-          [columnId]: newWidth
-        }
-        return updated
-      })
+      setColumnWidths(prev => ({
+        ...prev,
+        [columnId]: newWidth
+      }))
     }
     
     const handleMouseUp = () => {
@@ -147,8 +142,6 @@ function Cronograma() {
   }
 
   const handleEditAgendamento = (agendamento) => {
-    console.log('Editando agendamento:', agendamento)
-    // Transformar dados para o formato esperado pelo formulário
     const agendamentoFormatado = {
       ...agendamento,
       funcionario_id: agendamento.funcionario || agendamento.funcionario_id,
@@ -203,7 +196,7 @@ function Cronograma() {
     return filtrados
   }, [agenda, funcionarioSelecionado, dataSelecionada])
 
-  // Horários de 8h às 19h30 (finalizando no horário das 19h30 às 20h)
+  // Horários de 8h às 19h30
   const horarios = useMemo(() => {
     const todosHorarios = []
     for (let h = 8; h <= 19; h++) {
@@ -212,7 +205,6 @@ function Cronograma() {
         const minuto = m.toString().padStart(2, '0')
         todosHorarios.push(`${hora}:${minuto}`)
         
-        // Para a hora 19, só adiciona até 19:30 (para de adicionar depois do 19:30)
         if (h === 19 && m === 30) break
       }
     }
@@ -225,7 +217,6 @@ function Cronograma() {
     
     const resultado = {}
     
-    // Filtrar funcionários baseado na seleção
     const funcionariosFiltrados = funcionarioSelecionado === 'todos' 
       ? funcionarios 
       : funcionarios.filter(f => f.id === funcionarioSelecionado)
@@ -253,6 +244,31 @@ function Cronograma() {
     
     return resultado
   }, [funcionarios, tarefas, dadosFiltrados, horarios, funcionarioSelecionado])
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Cronograma</h1>
+        </div>
+        <Loading />
+      </div>
+    )
+  }
+
+  // Error state
+  if (hasError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Cronograma</h1>
+          <Button onClick={refetchAll}>Tentar Novamente</Button>
+        </div>
+        <ErrorMessage message={error?.message || 'Erro ao carregar dados'} />
+      </div>
+    )
+  }
 
   const TarefaCard = ({ tarefa, horario, funcionarioId }) => {
     if (!tarefa) {
@@ -326,22 +342,19 @@ function Cronograma() {
           </div>
         </div>
         
-        {/* Botões de ação */}
-        <div className="absolute top-0.5 right-0.5 flex gap-0.5">
-          {/* Botão de deletar - mais visível */}
-          <button
-            className="opacity-70 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs transition-all hover:scale-110"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (window.confirm(`Deseja excluir o agendamento "${tarefa.tarefaInfo?.nome || tarefa.tarefa}" às ${tarefa.horario}?`)) {
-                handleDeleteAgendamento(tarefa)
-              }
-            }}
-            title="Excluir agendamento"
-          >
-            ×
-          </button>
-        </div>
+        {/* Botão de deletar */}
+        <button
+          className="absolute top-0.5 right-0.5 opacity-70 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs transition-all hover:scale-110"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (window.confirm(`Deseja excluir o agendamento "${tarefa.tarefaInfo?.nome || tarefa.tarefa}" às ${tarefa.horario}?`)) {
+              handleDeleteAgendamento(tarefa)
+            }
+          }}
+          title="Excluir agendamento"
+        >
+          ×
+        </button>
       </div>
     )
   }
@@ -377,74 +390,11 @@ function Cronograma() {
                   <div className="text-xs font-medium text-gray-600 text-center leading-tight">
                     {formatarHorarioIntervalo(horario)}
                   </div>
-                  <div className={`p-1 rounded text-white text-xs min-h-8 relative group ${
-                    funcionario.tarefas[horario] 
-                      ? categoriasCores[funcionario.tarefas[horario].tarefaInfo?.categoria] || 'bg-gray-500'
-                      : 'bg-gray-100 dark:bg-gray-700 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600'
-                  } flex items-center justify-center`}
-                  onClick={() => funcionario.tarefas[horario] 
-                    ? handleEditAgendamento(funcionario.tarefas[horario])
-                    : handleAddAgendamento(horario, funcionario.id)
-                  }
-                  title={funcionario.tarefas[horario] ? "Clique para editar" : "Clique para adicionar tarefa"}
-                  >
-                    {funcionario.tarefas[horario] ? (
-                      <>
-                        {/* Checkbox de conclusão */}
-                        <button
-                          className={`absolute top-0.5 left-0.5 w-3 h-3 rounded border flex items-center justify-center transition-all z-10 ${
-                            funcionario.tarefas[horario].status === 'concluida'
-                              ? 'bg-green-500 border-green-500 text-white' 
-                              : 'border-white/50 hover:border-white hover:bg-white/20'
-                          }`}
-                          onClick={async (e) => {
-                            e.stopPropagation()
-                            try {
-                              const isCompleted = funcionario.tarefas[horario].status === 'concluida'
-                              const novoStatus = isCompleted ? 'nao_iniciada' : 'concluida'
-                              const agora = new Date()
-                              
-                              await supabaseService.updateAgendamento(funcionario.tarefas[horario].id, {
-                                status: novoStatus,
-                                tempo_fim: novoStatus === 'concluida' ? agora.toISOString() : null,
-                                tempo_real: novoStatus === 'concluida' ? (funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30) : null
-                              })
-                              
-                              refetchAgenda()
-                            } catch (error) {
-                              console.error('Erro ao atualizar tarefa:', error)
-                            }
-                          }}
-                          title={funcionario.tarefas[horario].status === 'concluida' ? 'Marcar como pendente' : 'Marcar como concluída'}
-                        >
-                          {funcionario.tarefas[horario].status === 'concluida' && <span className="text-xs">✓</span>}
-                        </button>
-
-                        <div className={`w-full ml-4 pr-4 ${funcionario.tarefas[horario].status === 'concluida' ? 'opacity-75' : ''}`}>
-                          <div className={`font-medium leading-tight break-words ${funcionario.tarefas[horario].status === 'concluida' ? 'line-through' : ''}`}>
-                            {funcionario.tarefas[horario].tarefaInfo?.nome}
-                          </div>
-                          <div className="text-xs opacity-75">
-                            {funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30}min
-                          </div>
-                        </div>
-                        
-                        {/* Botão de exclusão */}
-                        <button
-                          className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs transition-opacity z-10"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteAgendamento(funcionario.tarefas[horario])
-                          }}
-                          title="Excluir agendamento"
-                        >
-                          ×
-                        </button>
-                      </>
-                    ) : (
-                      <span className="text-gray-400">+</span>
-                    )}
-                  </div>
+                  <TarefaCard 
+                    tarefa={funcionario.tarefas[horario]} 
+                    horario={horario} 
+                    funcionarioId={funcionario.id} 
+                  />
                 </div>
               ))}
             </div>
@@ -493,81 +443,11 @@ function Cronograma() {
                   </td>
                   {horarios.map(horario => (
                     <td key={horario} className="border border-gray-200 p-1">
-                      {funcionario.tarefas[horario] ? (
-                        <div 
-                          className={`p-1 rounded text-white text-xs min-h-8 cursor-pointer group relative ${
-                            funcionario.tarefas[horario].status === 'concluida' ? 'opacity-75 ring-1 ring-green-400' : ''
-                          } ${categoriasCores[funcionario.tarefas[horario].tarefaInfo?.categoria] || 'bg-gray-500'}`}
-                          onClick={() => handleEditAgendamento(funcionario.tarefas[horario])}
-                          onContextMenu={(e) => {
-                            e.preventDefault()
-                            if (window.confirm(`Deseja excluir o agendamento "${funcionario.tarefas[horario].tarefaInfo?.nome}" às ${horario}?`)) {
-                              handleDeleteAgendamento(funcionario.tarefas[horario])
-                            }
-                          }}
-                          title="Clique para editar • Clique direito para excluir"
-                        >
-                          {/* Checkbox de conclusão */}
-                          <button
-                            className={`absolute top-0.5 left-0.5 w-3 h-3 rounded border flex items-center justify-center transition-all z-10 ${
-                              funcionario.tarefas[horario].status === 'concluida'
-                                ? 'bg-green-500 border-green-500 text-white' 
-                                : 'border-white/50 hover:border-white hover:bg-white/20'
-                            }`}
-                            onClick={async (e) => {
-                              e.stopPropagation()
-                              try {
-                                const isCompleted = funcionario.tarefas[horario].status === 'concluida'
-                                const novoStatus = isCompleted ? 'nao_iniciada' : 'concluida'
-                                const agora = new Date()
-                                
-                                await supabaseService.updateAgendamento(funcionario.tarefas[horario].id, {
-                                  status: novoStatus,
-                                  tempo_fim: novoStatus === 'concluida' ? agora.toISOString() : null,
-                                  tempo_real: novoStatus === 'concluida' ? (funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30) : null
-                                })
-                                
-                                refetchAgenda()
-                              } catch (error) {
-                                console.error('Erro ao atualizar tarefa:', error)
-                              }
-                            }}
-                            title={funcionario.tarefas[horario].status === 'concluida' ? 'Marcar como pendente' : 'Marcar como concluída'}
-                          >
-                            {funcionario.tarefas[horario].status === 'concluida' && <span className="text-xs">✓</span>}
-                          </button>
-
-                          <div className={`ml-4 pr-4 ${funcionario.tarefas[horario].status === 'concluida' ? 'line-through' : ''}`}>
-                            <div className="font-medium leading-tight break-words">
-                              {funcionario.tarefas[horario].tarefaInfo?.nome}
-                            </div>
-                            <div className="text-xs opacity-75">
-                              {funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30}min
-                            </div>
-                          </div>
-                          {/* Botão de deletar */}
-                          <button
-                            className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-3 h-3 flex items-center justify-center text-xs transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (window.confirm(`Deseja excluir o agendamento "${funcionario.tarefas[horario].tarefaInfo?.nome}" às ${horario}?`)) {
-                                handleDeleteAgendamento(funcionario.tarefas[horario])
-                              }
-                            }}
-                            title="Excluir agendamento"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ) : (
-                        <div 
-                          className="text-gray-400 text-xs text-center h-8 flex items-center justify-center cursor-pointer hover:bg-gray-100 rounded"
-                          onClick={() => handleAddAgendamento(horario, funcionario.id)}
-                          title="Clique para adicionar tarefa"
-                        >
-                          +
-                        </div>
-                      )}
+                      <TarefaCard 
+                        tarefa={funcionario.tarefas[horario]} 
+                        horario={horario} 
+                        funcionarioId={funcionario.id} 
+                      />
                     </td>
                   ))}
                 </tr>
@@ -637,74 +517,11 @@ function Cronograma() {
                       className="border border-gray-200 p-1"
                       style={{ width: `${getColumnWidth(funcionario.id)}px` }}
                     >
-                      {funcionario.tarefas[horario] ? (
-                        <div 
-                          className={`p-1 rounded text-white text-xs min-h-8 cursor-pointer group relative ${
-                            funcionario.tarefas[horario].status === 'concluida' ? 'opacity-75 ring-1 ring-green-400' : ''
-                          } ${categoriasCores[funcionario.tarefas[horario].tarefaInfo?.categoria] || 'bg-gray-500'}`}
-                          onClick={() => handleEditAgendamento(funcionario.tarefas[horario])}
-                          title="Clique para editar"
-                        >
-                          {/* Checkbox de conclusão */}
-                          <button
-                            className={`absolute top-0.5 left-0.5 w-3 h-3 rounded border flex items-center justify-center transition-all z-10 ${
-                              funcionario.tarefas[horario].status === 'concluida'
-                                ? 'bg-green-500 border-green-500 text-white' 
-                                : 'border-white/50 hover:border-white hover:bg-white/20'
-                            }`}
-                            onClick={async (e) => {
-                              e.stopPropagation()
-                              try {
-                                const isCompleted = funcionario.tarefas[horario].status === 'concluida'
-                                const novoStatus = isCompleted ? 'nao_iniciada' : 'concluida'
-                                const agora = new Date()
-                                
-                                await supabaseService.updateAgendamento(funcionario.tarefas[horario].id, {
-                                  status: novoStatus,
-                                  tempo_fim: novoStatus === 'concluida' ? agora.toISOString() : null,
-                                  tempo_real: novoStatus === 'concluida' ? (funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30) : null
-                                })
-                                
-                                refetchAgenda()
-                              } catch (error) {
-                                console.error('Erro ao atualizar tarefa:', error)
-                              }
-                            }}
-                            title={funcionario.tarefas[horario].status === 'concluida' ? 'Marcar como pendente' : 'Marcar como concluída'}
-                          >
-                            {funcionario.tarefas[horario].status === 'concluida' && <span className="text-xs">✓</span>}
-                          </button>
-
-                          <div className={`ml-4 pr-4 ${funcionario.tarefas[horario].status === 'concluida' ? 'line-through' : ''}`}>
-                            <div className="font-medium leading-tight break-words whitespace-pre-line text-xs">
-                              {funcionario.tarefas[horario].tarefaInfo?.nome?.split(' ').map((palavra, index, array) => {
-                                // Quebra linha a cada 2-3 palavras para textos longos
-                                if (array.length > 3 && (index === 1 || index === 3)) {
-                                  return palavra + '\n'
-                                }
-                                return palavra + (index < array.length - 1 ? ' ' : '')
-                              }).join('')}
-                            </div>
-                            <div className="text-xs opacity-75">
-                              {funcionario.tarefas[horario].tarefaInfo?.tempo_estimado || 30}min
-                            </div>
-                          </div>
-                          
-                          {/* Botão de exclusão */}
-                          <button
-                            className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-3 h-3 flex items-center justify-center text-xs transition-opacity z-10"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteAgendamento(funcionario.tarefas[horario])
-                            }}
-                            title="Excluir agendamento"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="text-gray-400 text-xs text-center h-8 flex items-center justify-center">-</div>
-                      )}
+                      <TarefaCard 
+                        tarefa={funcionario.tarefas[horario]} 
+                        horario={horario} 
+                        funcionarioId={funcionario.id} 
+                      />
                     </td>
                   ))}
                 </tr>
@@ -712,367 +529,304 @@ function Cronograma() {
             </tbody>
           </table>
         </div>
-      </CardContent>
-    </Card>
-  )
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Cronograma</h2>
-          <Loading message="Carregando cronograma..." />
-        </div>
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-6 gap-3">
-                  {Array.from({ length: 6 }).map((_, j) => (
-                    <div key={j} className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // Error state
-  if (hasError) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Cronograma</h2>
-        </div>
-        <ErrorMessage error={error} onRetry={refetchAll} />
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Header melhorado */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border border-blue-100 dark:border-gray-600">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <Calendar className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Cronograma</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Gerencie agendamentos e visualize a agenda da equipe</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border">
-                <Calendar className="w-4 h-4 text-blue-500" />
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  {new Date(dataSelecionada + 'T00:00:00').toLocaleDateString('pt-BR', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </span>
-              </div>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
-                {dadosFiltrados.length} agendamento{dadosFiltrados.length !== 1 ? 's' : ''}
-              </Badge>
-            </div>
-          </div>
-          
-          {/* Controles de data melhorados */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="bg-white dark:bg-gray-800 rounded-lg border p-2 flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const data = new Date(dataSelecionada)
-                  data.setDate(data.getDate() - 1)
-                  setDataSelecionada(data.toISOString().split('T')[0])
-                }}
-                className="h-8 w-8 p-0 hover:bg-blue-50"
-              >
-                ←
-              </Button>
-              <input
-                type="date"
-                value={dataSelecionada}
-                onChange={(e) => setDataSelecionada(e.target.value)}
-                className="px-3 py-1.5 border-0 bg-transparent focus:outline-none focus:ring-0 text-sm font-medium min-w-[140px]"
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const data = new Date(dataSelecionada)
-                  data.setDate(data.getDate() + 1)
-                  setDataSelecionada(data.toISOString().split('T')[0])
-                }}
-                className="h-8 w-8 p-0 hover:bg-blue-50"
-              >
-                →
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDataSelecionada(new Date().toISOString().split('T')[0])}
-                className="text-xs px-2 py-1 ml-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-              >
-                Hoje
-              </Button>
-            </div>
-            
-            {/* Navegação entre datas melhorada */}
-            {datasComAgendamentos.length > 1 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg border p-2 flex items-center gap-2">
-                <span className="text-xs text-gray-500 font-medium">Navegar:</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={dataAnteriorComAgendamentos}
-                  className="text-xs px-3 py-1.5 hover:bg-gray-50"
-                  disabled={!datasComAgendamentos.some(data => data < dataSelecionada)}
-                >
-                  ← Anterior
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={proximaDataComAgendamentos}
-                  className="text-xs px-3 py-1.5 hover:bg-gray-50"
-                  disabled={!datasComAgendamentos.some(data => data > dataSelecionada)}
-                >
-                  Próxima →
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Filtros por Funcionário melhorados */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="p-1.5 bg-green-100 rounded-lg">
-            <Users className="w-4 h-4 text-green-600" />
-          </div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Filtrar por Funcionário</h3>
-        </div>
         
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={funcionarioSelecionado === 'todos' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFuncionarioSelecionado('todos')}
-            className={`flex items-center gap-2 ${funcionarioSelecionado === 'todos' ? 'bg-blue-500 hover:bg-blue-600' : 'hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300'}`}
-          >
-            <Users className="w-4 h-4" />
-            Todos ({agenda?.filter(item => {
-              const itemData = item.data || new Date().toISOString().split('T')[0]
-              return itemData === dataSelecionada
-            }).length || 0})
-          </Button>
-          
-          {funcionarios?.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => {
-            const tarefasFuncionario = agenda?.filter(item => {
-              const itemData = item.data || new Date().toISOString().split('T')[0]
-              return itemData === dataSelecionada && item.funcionario === funcionario.id
-            }).length || 0
-            const isSelected = funcionarioSelecionado === funcionario.id
-            return (
-              <Button
-                key={funcionario.id}
-                variant="outline"
-                size="sm"
-                onClick={() => setFuncionarioSelecionado(funcionario.id)}
-                className={`flex items-center gap-2 transition-all ${
-                  isSelected 
-                    ? 'ring-2 ring-offset-1 shadow-md' 
-                    : 'hover:shadow-sm hover:scale-105'
-                }`}
-                style={{
-                  backgroundColor: isSelected ? funcionario.cor : 'transparent',
-                  borderColor: funcionario.cor,
-                  color: isSelected ? 'white' : funcionario.cor,
-                  ringColor: isSelected ? funcionario.cor : 'transparent'
-                }}
-              >
-                <div 
-                  className="w-3 h-3 rounded-full border border-white/20"
-                  style={{ backgroundColor: funcionario.cor }}
-                />
-                <span className="font-medium">{funcionario.nome}</span>
-                <Badge 
-                  variant="secondary" 
-                  className={`text-xs ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-100'}`}
-                >
-                  {tarefasFuncionario}
-                </Badge>
-              </Button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Seletor de visualização melhorado */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-purple-100 rounded-lg">
-            <Filter className="w-4 h-4 text-purple-600" />
-          </div>
-          <span className="font-semibold text-gray-900 dark:text-white">Modo de Visualização</span>
-        </div>
-        
-        <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-          {[
-            { value: 'timeline', label: 'Timeline', icon: '📊' },
-            { value: 'grade', label: 'Grade', icon: '📋' },
-            { value: 'grade-vertical', label: 'Vertical', icon: '📑' }
-          ].map((option) => (
-            <Button
-              key={option.value}
-              variant={visualizacao === option.value ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setVisualizacao(option.value)}
-              className={`flex items-center gap-2 ${
-                visualizacao === option.value 
-                  ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400 font-medium' 
-                  : 'hover:bg-white/50 dark:hover:bg-gray-600/50 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <span>{option.icon}</span>
-              {option.label}
-            </Button>
-          ))}
-        </div>
-        
-        {/* Botão para resetar larguras das colunas - só aparece na grade vertical e se houver larguras personalizadas */}
-        {visualizacao === 'grade-vertical' && Object.keys(columnWidths).length > 0 && (
+        {/* Botão para resetar larguras das colunas */}
+        {visualizacao === 'vertical' && Object.keys(columnWidths).length > 0 && (
           <Button
             variant="outline"
             size="sm"
             onClick={resetColumnWidths}
-            className="text-xs text-gray-600 hover:text-gray-800 border-gray-300 ml-2"
+            className="text-xs text-gray-600 hover:text-gray-800 border-gray-300 mt-2"
             title="Resetar larguras das colunas para o padrão"
           >
             🔄 Resetar Colunas
           </Button>
         )}
+      </CardContent>
+    </Card>
+  )
+
+  return (
+    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6 p-6">
+      {/* Elementos decorativos de fundo */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/5 to-indigo-600/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/5 to-pink-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
+      {/* Header premium com design igual ao calendário */}
+      <Card className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 border-0 shadow-2xl rounded-3xl">
+        {/* Padrão de fundo decorativo */}
+        <div className="absolute inset-0 opacity-[0.08]">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white rounded-full -translate-y-40 translate-x-40 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-60 h-60 bg-white rounded-full translate-y-30 -translate-x-30 animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-white rounded-full -translate-x-20 -translate-y-20 animate-pulse" style={{ animationDelay: '4s' }}></div>
+        </div>
 
-      {/* Resumo do dia melhorado */}
+        <CardHeader className="relative z-10 p-8">
+          <div className="space-y-4">
+            {/* Linha 1: Título e informações */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-xl">
+                    <Calendar className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-tight drop-shadow-lg flex items-center gap-3">
+                      Cronograma
+                      <Clock className="w-6 h-6 animate-pulse" />
+                    </h2>
+                    <p className="text-blue-100 text-lg font-medium mt-1">
+                      Gerencie agendamentos e visualize a agenda da equipe
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
+                    <Calendar className="w-5 h-5 text-white/90" />
+                    <span className="text-white font-semibold">
+                      {new Date(dataSelecionada + 'T00:00:00').toLocaleDateString('pt-BR', { 
+                        weekday: 'long', 
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-400/30 px-3 py-1 rounded-full font-semibold">
+                    {dadosFiltrados.length} agendamento{dadosFiltrados.length !== 1 ? 's' : ''}
+                  </Badge>
+                </div>
+              </div>
+              
+              {/* Navegação de data premium */}
+              <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md rounded-2xl p-2 shadow-lg">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setDataSelecionada(new Date().toISOString().split('T')[0])}
+                  className="text-white hover:bg-white/20 rounded-xl px-4 py-2 font-medium"
+                >
+                  Hoje
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const data = new Date(dataSelecionada)
+                    data.setDate(data.getDate() - 1)
+                    setDataSelecionada(data.toISOString().split('T')[0])
+                  }}
+                  className="text-white hover:bg-white/20 rounded-xl h-10 w-10 p-0"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
+                <input
+                  type="date"
+                  value={dataSelecionada}
+                  onChange={(e) => setDataSelecionada(e.target.value)}
+                  className="font-bold text-white min-w-[160px] text-center px-4 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20 focus:ring-2 focus:ring-white/50"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const data = new Date(dataSelecionada)
+                    data.setDate(data.getDate() + 1)
+                    setDataSelecionada(data.toISOString().split('T')[0])
+                  }}
+                  className="text-white hover:bg-white/20 rounded-xl h-10 w-10 p-0"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Linha 2: Filtros integrados */}
+            <div className="flex flex-col xl:flex-row gap-4">
+
+
+              {/* Filtros por Funcionário integrados */}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={funcionarioSelecionado === 'todos' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setFuncionarioSelecionado('todos')}
+                  className={`text-white hover:bg-white/20 ${funcionarioSelecionado === 'todos' ? 'bg-white/30' : ''}`}
+                >
+                  <Users className="w-4 h-4 mr-1" />
+                  Todos ({agenda?.filter(item => {
+                    const itemData = item.data || new Date().toISOString().split('T')[0]
+                    return itemData === dataSelecionada
+                  }).length || 0})
+                </Button>
+                
+                {funcionarios?.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => {
+                  const tarefasFuncionario = agenda?.filter(item => {
+                    const itemData = item.data || new Date().toISOString().split('T')[0]
+                    return itemData === dataSelecionada && item.funcionario === funcionario.id
+                  }).length || 0
+                  const isSelected = funcionarioSelecionado === funcionario.id
+                  return (
+                    <Button
+                      key={funcionario.id}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFuncionarioSelecionado(funcionario.id)}
+                      className="text-white hover:bg-white/20"
+                      style={{
+                        backgroundColor: isSelected ? funcionario.cor : 'rgba(255,255,255,0.1)',
+                        borderColor: funcionario.cor,
+                        color: 'white'
+                      }}
+                    >
+                      <div 
+                        className="w-3 h-3 rounded-full mr-2"
+                        style={{ backgroundColor: funcionario.cor }}
+                      />
+                      {funcionario.nome} ({tarefasFuncionario})
+                    </Button>
+                  )
+                })}
+              </div>
+
+              {/* Modo de Visualização integrado */}
+              <div className="flex gap-1 bg-white/10 rounded-lg p-1">
+                <Button
+                  variant={visualizacao === 'timeline' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setVisualizacao('timeline')}
+                  className={`text-white hover:bg-white/20 ${visualizacao === 'timeline' ? 'bg-white/30' : ''}`}
+                >
+                  <List className="w-4 h-4 mr-1" />
+                  Timeline
+                </Button>
+                <Button
+                  variant={visualizacao === 'grade' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setVisualizacao('grade')}
+                  className={`text-white hover:bg-white/20 ${visualizacao === 'grade' ? 'bg-white/30' : ''}`}
+                >
+                  <Grid3X3 className="w-4 h-4 mr-1" />
+                  Grade
+                </Button>
+                <Button
+                  variant={visualizacao === 'vertical' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setVisualizacao('vertical')}
+                  className={`text-white hover:bg-white/20 ${visualizacao === 'vertical' ? 'bg-white/30' : ''}`}
+                >
+                  <BarChart3 className="w-4 h-4 mr-1" />
+                  Grade Vertical
+                </Button>
+              </div>
+
+              {/* Navegação entre datas */}
+              {datasComAgendamentos.length > 1 && (
+                <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1">
+                  <span className="text-xs text-white/80 px-2">Navegar:</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={dataAnteriorComAgendamentos}
+                    className="text-white hover:bg-white/20 text-xs px-2"
+                    disabled={!datasComAgendamentos.some(data => data < dataSelecionada)}
+                  >
+                    ← Anterior
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={proximaDataComAgendamentos}
+                    className="text-white hover:bg-white/20 text-xs px-2"
+                    disabled={!datasComAgendamentos.some(data => data > dataSelecionada)}
+                  >
+                    Próxima →
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+
+
+      {/* Resumo do dia */}
       {dadosFiltrados.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all">
+          <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="p-1.5 bg-blue-500 rounded-lg">
-                      <Calendar className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-sm font-medium text-blue-700">Total</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {dadosFiltrados.length}
-                  </p>
-                  <p className="text-xs text-blue-600/70">agendamentos</p>
-                </div>
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium">Total</span>
               </div>
+              <p className="text-2xl font-bold text-blue-600">
+                {dadosFiltrados.length}
+              </p>
+              <p className="text-xs text-gray-600">agendamentos</p>
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all">
+          <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="p-1.5 bg-green-500 rounded-lg">
-                      <User className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-sm font-medium text-green-700">Ativos</span>
-                  </div>
-                  <p className="text-2xl font-bold text-green-600">
-                    {new Set(dadosFiltrados.map(item => item.funcionario)).size}
-                  </p>
-                  <p className="text-xs text-green-600/70">funcionários</p>
-                </div>
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-green-500" />
+                <span className="text-sm font-medium">Ativos</span>
               </div>
+              <p className="text-2xl font-bold text-green-600">
+                {new Set(dadosFiltrados.map(item => item.funcionario)).size}
+              </p>
+              <p className="text-xs text-gray-600">funcionários</p>
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all">
+          <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="p-1.5 bg-purple-500 rounded-lg">
-                      <Clock className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-sm font-medium text-purple-700">Tempo</span>
-                  </div>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {Math.round(dadosFiltrados.reduce((acc, item) => {
-                      const tarefa = tarefas?.find(t => t.id === item.tarefa)
-                      return acc + (tarefa?.tempo_estimado || 30)
-                    }, 0) / 60)}h
-                  </p>
-                  <p className="text-xs text-purple-600/70">estimado</p>
-                </div>
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 text-orange-500" />
+                <span className="text-sm font-medium">Tempo</span>
               </div>
+              <p className="text-2xl font-bold text-orange-600">
+                {Math.round(dadosFiltrados.reduce((acc, item) => {
+                  const tarefa = tarefas?.find(t => t.id === item.tarefa)
+                  return acc + (tarefa?.tempo_estimado || 30)
+                }, 0) / 60)}h
+              </p>
+              <p className="text-xs text-gray-600">estimado</p>
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-lg transition-all">
+          <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="p-1.5 bg-emerald-500 rounded-lg">
-                      <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
-                        <span className="text-emerald-500 text-xs font-bold">✓</span>
-                      </div>
-                    </div>
-                    <span className="text-sm font-medium text-emerald-700">Concluídas</span>
-                  </div>
-                  <p className="text-2xl font-bold text-emerald-600">
-                    {dadosFiltrados.filter(item => item.status === 'concluida').length}
-                  </p>
-                  <p className="text-xs text-emerald-600/70">finalizadas</p>
-                </div>
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle2 className="w-4 h-4 text-purple-500" />
+                <span className="text-sm font-medium">Concluídas</span>
               </div>
+              <p className="text-2xl font-bold text-purple-600">
+                {dadosFiltrados.filter(item => item.status === 'concluida').length}
+              </p>
+              <p className="text-xs text-gray-600">finalizadas</p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Legenda de categorias melhorada */}
-      <Card className="bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-gray-500 rounded-lg">
-              <span className="text-white text-sm">🏷️</span>
-            </div>
-            <CardTitle className="text-lg font-semibold text-gray-800">Legenda de Categorias</CardTitle>
-          </div>
+      {/* Legenda de categorias */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <span>🏷️</span>
+            Legenda de Categorias
+          </CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {Object.entries(categoriasCores).map(([categoria, cor]) => (
-              <div key={categoria} className="flex items-center gap-2 bg-white rounded-lg p-2 border hover:shadow-sm transition-all">
-                <div className={`w-3 h-3 rounded-full ${cor} shadow-sm`} />
-                <span className="text-sm font-medium capitalize text-gray-700">{categoria}</span>
+              <div key={categoria} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                <div className={`w-3 h-3 rounded-full ${cor}`} />
+                <span className="text-sm capitalize">{categoria}</span>
               </div>
             ))}
           </div>
@@ -1100,4 +854,3 @@ function Cronograma() {
 }
 
 export default Cronograma
-
