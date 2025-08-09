@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Clock, User, Users, Filter, Calendar, ChevronLeft, ChevronRight, Grid3X3, List, BarChart3, CheckCircle2 } from 'lucide-react'
+import { Clock, User, Users, Filter, Calendar, ChevronLeft, ChevronRight, Grid3X3, List, BarChart3, CheckCircle2, X } from 'lucide-react'
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
@@ -26,6 +26,10 @@ function Cronograma() {
   const [funcionarioSelecionado, setFuncionarioSelecionado] = useState('todos')
   const [visualizacao, setVisualizacao] = useState('timeline')
   const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0])
+  
+  // Estados para seleção múltipla
+  const [modoSelecaoMultipla, setModoSelecaoMultipla] = useState(false)
+  const [tarefasSelecionadas, setTarefasSelecionadas] = useState(new Set())
   
   const showSuccess = (message) => alert('Sucesso: ' + message)
   const showError = (message) => alert('Erro: ' + message)
@@ -176,9 +180,58 @@ function Cronograma() {
     }
   }
 
+  // Funções para seleção múltipla
+  const toggleSelecaoTarefa = (tarefaId) => {
+    const novaSelecao = new Set(tarefasSelecionadas)
+    if (novaSelecao.has(tarefaId)) {
+      novaSelecao.delete(tarefaId)
+    } else {
+      novaSelecao.add(tarefaId)
+    }
+    setTarefasSelecionadas(novaSelecao)
+  }
+
+  const marcarTodasSelecionadasComoConcluidas = async () => {
+    if (tarefasSelecionadas.size === 0) {
+      showError('Nenhuma tarefa selecionada')
+      return
+    }
+
+    try {
+      const agora = new Date()
+      const promises = Array.from(tarefasSelecionadas).map(tarefaId => {
+        const tarefa = dadosFiltrados.find(t => t.id === tarefaId)
+        if (tarefa && tarefa.status !== 'concluida') {
+          return supabaseService.updateAgendamento(tarefaId, {
+            status: 'concluida',
+            tempo_fim: agora.toISOString(),
+            tempo_real: tarefa.tarefaInfo?.tempo_estimado || 30
+          })
+        }
+        return Promise.resolve()
+      })
+
+      await Promise.all(promises)
+      showSuccess(`${tarefasSelecionadas.size} tarefa(s) marcada(s) como concluída(s)!`)
+      setTarefasSelecionadas(new Set())
+      setModoSelecaoMultipla(false)
+      refetchAgenda()
+    } catch (error) {
+      showError('Erro ao marcar tarefas como concluídas: ' + error.message)
+    }
+  }
+
+  const cancelarSelecaoMultipla = () => {
+    setTarefasSelecionadas(new Set())
+    setModoSelecaoMultipla(false)
+  }
+
   // Dados filtrados
   const dadosFiltrados = useMemo(() => {
     if (!agenda) return []
+    
+    // Expor dados para debug
+    window.__CRONOGRAMA_DEBUG_DATA__ = agenda
     
     let filtrados = agenda
     
@@ -235,9 +288,28 @@ function Cronograma() {
     dadosFiltrados.forEach(item => {
       if (resultado[item.funcionario]) {
         const tarefa = tarefas.find(t => t.id === item.tarefa)
-        resultado[item.funcionario].tarefas[item.horario] = {
+        const tarefaData = {
           ...item,
           tarefaInfo: tarefa
+        }
+        
+        // Se tem horários ocupados (agendamento longo), marca todos os slots
+        if (item.horarios_ocupados && item.horarios_ocupados.length > 1) {
+          item.horarios_ocupados.forEach((horario, index) => {
+            if (resultado[item.funcionario].tarefas[horario] === null) {
+              resultado[item.funcionario].tarefas[horario] = {
+                ...tarefaData,
+                isPartOfLongerTask: true,
+                isFirstSlot: index === 0,
+                isLastSlot: index === item.horarios_ocupados.length - 1,
+                totalSlots: item.horarios_ocupados.length,
+                slotIndex: index
+              }
+            }
+          })
+        } else {
+          // Agendamento normal de 30min
+          resultado[item.funcionario].tarefas[item.horario] = tarefaData
         }
       }
     })
@@ -286,9 +358,26 @@ function Cronograma() {
     const categoria = tarefa.tarefaInfo?.categoria || 'interno'
     const corCategoria = categoriasCores[categoria] || 'bg-gray-500'
     const isCompleted = tarefa.status === 'concluida'
+    
+    // Verificar se é parte de um agendamento longo
+    const isLongTask = tarefa.isPartOfLongerTask
+    const isFirstSlot = tarefa.isFirstSlot
+    const isLastSlot = tarefa.isLastSlot
+    const totalSlots = tarefa.totalSlots || 1
+    const duracao = tarefa.duracao || 30
+
+
 
     const toggleTarefa = async (e) => {
       e.stopPropagation()
+      
+      // Se estiver no modo de seleção múltipla, apenas seleciona/deseleciona
+      if (modoSelecaoMultipla) {
+        toggleSelecaoTarefa(tarefa.id)
+        return
+      }
+
+      // Comportamento normal - marca/desmarca individualmente
       try {
         const novoStatus = isCompleted ? 'nao_iniciada' : 'concluida'
         const agora = new Date()
@@ -305,11 +394,28 @@ function Cronograma() {
       }
     }
 
+    // Para agendamentos longos, só mostrar conteúdo no primeiro slot
+    if (isLongTask && !isFirstSlot) {
+      return (
+        <div 
+          className={`p-1 ${corCategoria} rounded text-white text-xs min-h-8 shadow-sm transition-all cursor-pointer relative ${
+            isCompleted ? 'opacity-75 ring-1 ring-green-400' : ''
+          } border-l-2 border-white/30`}
+          onClick={() => handleEditAgendamento(tarefa)}
+          title={`Continuação: ${tarefa.tarefaInfo?.nome || tarefa.tarefa} (${duracao}min)`}
+        >
+          <div className="flex items-center justify-center h-full">
+            <span className="text-xs opacity-60">...</span>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div 
         className={`p-1 ${corCategoria} rounded text-white text-xs min-h-8 shadow-sm hover:shadow-md transition-all cursor-pointer group relative ${
           isCompleted ? 'opacity-75 ring-1 ring-green-400' : ''
-        }`}
+        } ${isLongTask ? 'border-r-2 border-white/30' : ''}`}
         onClick={() => handleEditAgendamento(tarefa)}
         onContextMenu={(e) => {
           e.preventDefault()
@@ -317,32 +423,40 @@ function Cronograma() {
             handleDeleteAgendamento(tarefa)
           }
         }}
-        title="Clique para editar • Clique direito para excluir"
+        title={`Clique para editar • Clique direito para excluir${isLongTask ? ` • Duração: ${duracao}min` : ''}`}
       >
-        {/* Checkbox */}
+        {/* Checkbox - só no primeiro slot */}
         <button
           className={`absolute top-0.5 left-0.5 w-3 h-3 rounded border flex items-center justify-center transition-all ${
-            isCompleted 
+            modoSelecaoMultipla && tarefasSelecionadas.has(tarefa.id)
+              ? 'bg-blue-500 border-blue-500 text-white'
+              : isCompleted 
               ? 'bg-green-500 border-green-500 text-white' 
               : 'border-white/50 hover:border-white hover:bg-white/20'
           }`}
           onClick={toggleTarefa}
-          title={isCompleted ? 'Marcar como pendente' : 'Marcar como concluída'}
+          title={
+            modoSelecaoMultipla 
+              ? (tarefasSelecionadas.has(tarefa.id) ? 'Desselecionar' : 'Selecionar')
+              : (isCompleted ? 'Marcar como pendente' : 'Marcar como concluída')
+          }
         >
-          {isCompleted && <span className="text-xs">✓</span>}
+          {modoSelecaoMultipla && tarefasSelecionadas.has(tarefa.id) && <span className="text-xs">✓</span>}
+          {!modoSelecaoMultipla && isCompleted && <span className="text-xs">✓</span>}
         </button>
 
         {/* Conteúdo da tarefa */}
         <div className="ml-4 pr-6">
           <div className={`font-medium leading-tight break-words ${isCompleted ? 'line-through' : ''}`}>
             {tarefa.tarefaInfo?.nome || tarefa.tarefa}
+            {isLongTask && <span className="ml-1 text-xs opacity-75">({duracao}min)</span>}
           </div>
           <div className="text-xs opacity-75 leading-tight">
-            {tarefa.tarefaInfo?.tempo_estimado || 30}min
+            {isLongTask ? `${tarefa.horario} - ${tarefa.horarios_ocupados?.[tarefa.horarios_ocupados.length - 1] || tarefa.horario}` : `${duracao}min`}
           </div>
         </div>
         
-        {/* Botão de deletar */}
+        {/* Botão de deletar - só no primeiro slot */}
         <button
           className="absolute top-0.5 right-0.5 opacity-70 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs transition-all hover:scale-110"
           onClick={(e) => {
@@ -648,12 +762,12 @@ function Cronograma() {
 
 
               {/* Filtros por Funcionário integrados */}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 items-center">
                 <Button
                   variant={funcionarioSelecionado === 'todos' ? 'secondary' : 'ghost'}
                   size="sm"
                   onClick={() => setFuncionarioSelecionado('todos')}
-                  className={`text-white hover:bg-white/20 ${funcionarioSelecionado === 'todos' ? 'bg-white/30' : ''}`}
+                  className={`text-white hover:bg-white/20 flex items-center justify-center ${funcionarioSelecionado === 'todos' ? 'bg-white/30' : ''}`}
                 >
                   <Users className="w-4 h-4 mr-1" />
                   Todos ({agenda?.filter(item => {
@@ -674,7 +788,7 @@ function Cronograma() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setFuncionarioSelecionado(funcionario.id)}
-                      className="text-white hover:bg-white/20"
+                      className="text-white hover:bg-white/20 flex items-center justify-center"
                       style={{
                         backgroundColor: isSelected ? funcionario.cor : 'rgba(255,255,255,0.1)',
                         borderColor: funcionario.cor,
@@ -692,12 +806,12 @@ function Cronograma() {
               </div>
 
               {/* Modo de Visualização integrado */}
-              <div className="flex gap-1 bg-white/10 rounded-lg p-1">
+              <div className="flex gap-1 bg-white/10 rounded-lg p-1 items-center">
                 <Button
                   variant={visualizacao === 'timeline' ? 'secondary' : 'ghost'}
                   size="sm"
                   onClick={() => setVisualizacao('timeline')}
-                  className={`text-white hover:bg-white/20 ${visualizacao === 'timeline' ? 'bg-white/30' : ''}`}
+                  className={`text-white hover:bg-white/20 flex items-center justify-center ${visualizacao === 'timeline' ? 'bg-white/30' : ''}`}
                 >
                   <List className="w-4 h-4 mr-1" />
                   Timeline
@@ -706,7 +820,7 @@ function Cronograma() {
                   variant={visualizacao === 'grade' ? 'secondary' : 'ghost'}
                   size="sm"
                   onClick={() => setVisualizacao('grade')}
-                  className={`text-white hover:bg-white/20 ${visualizacao === 'grade' ? 'bg-white/30' : ''}`}
+                  className={`text-white hover:bg-white/20 flex items-center justify-center ${visualizacao === 'grade' ? 'bg-white/30' : ''}`}
                 >
                   <Grid3X3 className="w-4 h-4 mr-1" />
                   Grade
@@ -715,22 +829,59 @@ function Cronograma() {
                   variant={visualizacao === 'vertical' ? 'secondary' : 'ghost'}
                   size="sm"
                   onClick={() => setVisualizacao('vertical')}
-                  className={`text-white hover:bg-white/20 ${visualizacao === 'vertical' ? 'bg-white/30' : ''}`}
+                  className={`text-white hover:bg-white/20 flex items-center justify-center ${visualizacao === 'vertical' ? 'bg-white/30' : ''}`}
                 >
                   <BarChart3 className="w-4 h-4 mr-1" />
                   Grade Vertical
                 </Button>
               </div>
 
+              {/* Controles de Seleção Múltipla */}
+              <div className="flex gap-1 bg-white/10 rounded-lg p-1 items-center">
+                {!modoSelecaoMultipla ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setModoSelecaoMultipla(true)}
+                    className="text-white hover:bg-white/20 flex items-center justify-center"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-1" />
+                    Seleção Múltipla
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={marcarTodasSelecionadasComoConcluidas}
+                      className="text-white hover:bg-green-500/20 bg-green-500/10 flex items-center justify-center"
+                      disabled={tarefasSelecionadas.size === 0}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      Concluir ({tarefasSelecionadas.size})
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={cancelarSelecaoMultipla}
+                      className="text-white hover:bg-red-500/20 bg-red-500/10 flex items-center justify-center"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Cancelar
+                    </Button>
+                  </>
+                )}
+              </div>
+
               {/* Navegação entre datas */}
               {datasComAgendamentos.length > 1 && (
                 <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1">
-                  <span className="text-xs text-white/80 px-2">Navegar:</span>
+                  <span className="text-xs text-white/80 px-2 flex items-center">Navegar:</span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={dataAnteriorComAgendamentos}
-                    className="text-white hover:bg-white/20 text-xs px-2"
+                    className="text-white hover:bg-white/20 text-xs px-2 flex items-center justify-center"
                     disabled={!datasComAgendamentos.some(data => data < dataSelecionada)}
                   >
                     ← Anterior
@@ -739,7 +890,7 @@ function Cronograma() {
                     variant="ghost"
                     size="sm"
                     onClick={proximaDataComAgendamentos}
-                    className="text-white hover:bg-white/20 text-xs px-2"
+                    className="text-white hover:bg-white/20 text-xs px-2 flex items-center justify-center"
                     disabled={!datasComAgendamentos.some(data => data > dataSelecionada)}
                   >
                     Próxima →

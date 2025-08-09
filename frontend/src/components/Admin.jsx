@@ -782,48 +782,65 @@ function Admin() {
   // }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6">
+    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6 p-6">
       {/* Elementos decorativos de fundo */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/5 to-indigo-600/5 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/5 to-pink-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      {/* Header moderno e limpo */}
-      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white shadow-2xl relative overflow-hidden">
-        {/* Padrão de fundo sutil */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
+      {/* Header premium com design igual ao cronograma */}
+      <Card className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 border-0 shadow-2xl rounded-3xl">
+        {/* Padrão de fundo decorativo */}
+        <div className="absolute inset-0 opacity-[0.08]">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white rounded-full -translate-y-40 translate-x-40 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-60 h-60 bg-white rounded-full translate-y-30 -translate-x-30 animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-white rounded-full -translate-x-20 -translate-y-20 animate-pulse" style={{ animationDelay: '4s' }}></div>
         </div>
-        
-        <div className="relative z-10 px-6 py-8">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-                <Settings className="h-8 w-8 text-white" />
-              </div>
+
+        <CardHeader className="relative z-10 p-8">
+          <div className="space-y-4">
+            {/* Linha 1: Título e informações */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Administração</h1>
-                <p className="text-blue-100 text-lg font-medium mt-1">
-                  Gerencie funcionários, tarefas e agendamentos
-                </p>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-xl">
+                    <Settings className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-tight drop-shadow-lg flex items-center gap-3">
+                      Administração
+                      <Users className="w-6 h-6 animate-pulse" />
+                    </h2>
+                    <p className="text-blue-100 text-lg font-medium mt-1">
+                      Gerencie funcionários, tarefas e configurações do sistema
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
+                    <Users className="w-5 h-5 text-white/90" />
+                    <span className="text-white font-semibold">
+                      {funcionarios?.length || 0} funcionários
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
+                    <FileText className="w-5 h-5 text-white/90" />
+                    <span className="text-white font-semibold">
+                      {tarefas?.length || 0} tarefas
+                    </span>
+                  </div>
+                  <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-400/30 px-3 py-1 rounded-full font-semibold">
+                    {agenda?.length || 0} agendamentos
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </CardHeader>
+      </Card>
 
-      <div className="p-6">
-        {/* Debug info */}
-        <div className="mb-4 p-4 bg-yellow-100 rounded-lg">
-          <p><strong>Debug Info:</strong></p>
-          <p>Funcionários: {funcionarios?.length || 0} | Loading: {loadingFuncionarios ? 'Sim' : 'Não'}</p>
-          <p>Tarefas: {tarefas?.length || 0} | Loading: {loadingTarefas ? 'Sim' : 'Não'}</p>
-          <p>Agenda: {agenda?.length || 0} | Loading: {loadingAgenda ? 'Sim' : 'Não'}</p>
-        </div>
-        
-        <Tabs defaultValue="funcionarios" className="w-full">
+      <Tabs defaultValue="funcionarios" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-white/90 backdrop-blur-md border-0 shadow-lg rounded-2xl p-2 h-auto mb-8">
             <TabsTrigger 
               value="funcionarios" 
@@ -868,8 +885,7 @@ function Admin() {
           <TabsContent value="agenda">
             <GerenciarAgenda />
           </TabsContent>
-        </Tabs>
-      </div>
+      </Tabs>
     </div>
   )
 }

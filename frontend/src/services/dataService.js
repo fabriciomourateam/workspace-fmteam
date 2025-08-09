@@ -159,7 +159,10 @@ class DataService {
           tempo_inicio: item.tempo_inicio,
           tempo_fim: item.tempo_fim,
           funcionario_nome: item.funcionario?.nome,
-          tarefa_nome: item.tarefa?.nome
+          tarefa_nome: item.tarefa?.nome,
+          // Novas colunas para agendamentos longos
+          duracao: item.duracao || 30,
+          horarios_ocupados: item.horarios_ocupados || [item.horario]
         }));
         
         return transformedData;

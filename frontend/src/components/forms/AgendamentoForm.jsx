@@ -29,7 +29,8 @@ export default function AgendamentoForm({
     horarios: agendamento?.horario ? [agendamento.horario] : (horarioInicial ? [horarioInicial] : []),
     funcionarios_ids: agendamento?.funcionario_id ? [agendamento.funcionario_id] : (funcionarioInicial ? [funcionarioInicial] : []),
     tarefa_id: agendamento?.tarefa_id || '',
-    data: agendamento?.data || dataInicial || new Date().toISOString().split('T')[0]
+    data: agendamento?.data || dataInicial || new Date().toISOString().split('T')[0],
+    duracao: agendamento?.duracao || '30'
   })
 
   const [tipoAgendamento, setTipoAgendamento] = useState('unico') // 'unico' ou 'recorrente'
@@ -58,6 +59,31 @@ export default function AgendamentoForm({
       // Para a hora 19, só adiciona até 19:30 (para de adicionar depois do 19:30)
       if (h === 19 && m === 30) break
     }
+  }
+
+  // Função para calcular horários ocupados baseado na duração
+  const calcularHorariosOcupados = (horarioInicio, duracao) => {
+    const duracaoMinutos = parseInt(duracao)
+    const slotsNecessarios = duracaoMinutos / 30
+    const indiceInicio = horarios.indexOf(horarioInicio)
+    
+    if (indiceInicio === -1) return [horarioInicio]
+    
+    const horariosOcupados = []
+    for (let i = 0; i < slotsNecessarios && (indiceInicio + i) < horarios.length; i++) {
+      horariosOcupados.push(horarios[indiceInicio + i])
+    }
+    
+    return horariosOcupados
+  }
+
+  // Função para verificar se um horário pode acomodar a duração selecionada
+  const podeAcomodarDuracao = (horarioInicio, duracao) => {
+    const duracaoMinutos = parseInt(duracao)
+    const slotsNecessarios = duracaoMinutos / 30
+    const indiceInicio = horarios.indexOf(horarioInicio)
+    
+    return (indiceInicio + slotsNecessarios) <= horarios.length
   }
 
   // Função para gerar datas recorrentes
@@ -117,11 +143,14 @@ export default function AgendamentoForm({
         for (const data of datas) {
           for (const funcionario_id of formData.funcionarios_ids) {
             for (const horario of formData.horarios) {
+              const horariosOcupados = calcularHorariosOcupados(horario, formData.duracao)
               const agendamentoData = {
                 funcionario_id,
                 horario,
                 tarefa_id: formData.tarefa_id,
-                data: data
+                data: data,
+                duracao: parseInt(formData.duracao),
+                horarios_ocupados: horariosOcupados
               }
               await onSave(agendamentoData)
               totalAgendamentos++
@@ -134,11 +163,14 @@ export default function AgendamentoForm({
         // Agendamentos múltiplos para data única
         if (agendamento) {
           // Modo edição - manter comportamento original
+          const horariosOcupados = calcularHorariosOcupados(formData.horarios[0], formData.duracao)
           const agendamentoData = {
             funcionario_id: formData.funcionarios_ids[0],
             horario: formData.horarios[0],
             tarefa_id: formData.tarefa_id,
-            data: formData.data
+            data: formData.data,
+            duracao: parseInt(formData.duracao),
+            horarios_ocupados: horariosOcupados
           }
           await onSave(agendamentoData)
           showSuccess('Agendamento atualizado com sucesso!')
@@ -146,11 +178,14 @@ export default function AgendamentoForm({
           // Modo criação - múltiplas combinações
           for (const funcionario_id of formData.funcionarios_ids) {
             for (const horario of formData.horarios) {
+              const horariosOcupados = calcularHorariosOcupados(horario, formData.duracao)
               const agendamentoData = {
                 funcionario_id,
                 horario,
                 tarefa_id: formData.tarefa_id,
-                data: formData.data
+                data: formData.data,
+                duracao: parseInt(formData.duracao),
+                horarios_ocupados: horariosOcupados
               }
               await onSave(agendamentoData)
               totalAgendamentos++
@@ -322,25 +357,64 @@ export default function AgendamentoForm({
             </div>
           )}
 
+          {/* Duração do agendamento */}
+          <div className={getClassesDensidade('spacing')}>
+            <Label className={getClassesDensidade('text')}>Duração</Label>
+            <Select 
+              value={formData.duracao || '30'} 
+              onValueChange={(value) => handleChange('duracao', value)}
+            >
+              <SelectTrigger className={getClassesDensidade('card')}>
+                <SelectValue placeholder="Selecione a duração" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="30">30 minutos</SelectItem>
+                <SelectItem value="60">1 hora</SelectItem>
+                <SelectItem value="90">1h 30min</SelectItem>
+                <SelectItem value="120">2 horas</SelectItem>
+                <SelectItem value="150">2h 30min</SelectItem>
+                <SelectItem value="180">3 horas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Seleção múltipla de horários */}
           <div className={getClassesDensidade('spacing')}>
             <Label className={getClassesDensidade('text')}>Horários ({formData.horarios.length} selecionado{formData.horarios.length !== 1 ? 's' : ''})</Label>
             <div className="max-h-96 overflow-y-auto border border-gray-300 rounded-md p-3" style={{ minHeight: '200px' }}>
               <div className={`grid grid-cols-3 ${getClassesDensidade('gap')}`}>
-                {horarios.map(horario => (
-                  <button
-                    key={horario}
-                    type="button"
-                    onClick={() => toggleHorario(horario)}
-                    className={`${getClassesDensidade('card')} rounded ${getClassesDensidade('text')} font-medium transition-colors ${
-                      formData.horarios.includes(horario)
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {horario}
-                  </button>
-                ))}
+                {horarios.map(horario => {
+                  const podeSelecionar = podeAcomodarDuracao(horario, formData.duracao)
+                  const horariosOcupados = calcularHorariosOcupados(horario, formData.duracao)
+                  
+                  return (
+                    <button
+                      key={horario}
+                      type="button"
+                      onClick={() => podeSelecionar && toggleHorario(horario)}
+                      disabled={!podeSelecionar}
+                      className={`${getClassesDensidade('card')} rounded ${getClassesDensidade('text')} font-medium transition-colors ${
+                        !podeSelecionar
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : formData.horarios.includes(horario)
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                      title={
+                        !podeSelecionar 
+                          ? `Duração de ${formData.duracao}min não cabe neste horário`
+                          : `${horario} - ${horariosOcupados[horariosOcupados.length - 1]} (${formData.duracao}min)`
+                      }
+                    >
+                      {horario}
+                      {formData.duracao !== '30' && podeSelecionar && (
+                        <div className="text-xs opacity-75">
+                          até {horariosOcupados[horariosOcupados.length - 1]}
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </div>
             <div className="flex gap-2">
