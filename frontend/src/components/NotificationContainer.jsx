@@ -1,10 +1,8 @@
 import React from 'react';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationContext';
-import { useTheme } from '../contexts/ThemeContext';
 
 const NotificationItem = ({ notification, onRemove }) => {
-  const { isDark } = useTheme();
 
   const getIcon = () => {
     switch (notification.type) {

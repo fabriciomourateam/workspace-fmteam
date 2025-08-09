@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 // import { ThemeProvider } from './contexts/ThemeContext'
-// import { NotificationProvider } from './contexts/NotificationContext'
+import { NotificationProvider } from './contexts/NotificationContext'
 // import ThemeToggle from './components/ThemeToggle'
-// import NotificationContainer from './components/NotificationContainer'
+import NotificationContainer from './components/NotificationContainer'
 // import GlobalSearch from './components/GlobalSearch'
 import { UserPreferencesProvider } from './contexts/UserPreferencesContext'
 import ConfiguracoesPessoais from './components/ConfiguracoesPessoais'
@@ -19,7 +19,7 @@ import Cronograma from './components/Cronograma'
 import Processos from './components/Processos'
 import DemandasImportantes from './components/DemandasImportantes'
 import Relatorios from './components/Relatorios'
-import Admin from './components/AdminFixed'
+import Admin from './components/AdminSimple'
 import CalendarioAgendamentos from './components/CalendarioAgendamentos'
 // import useKeyboardShortcuts from './hooks/useKeyboardShortcuts'
 import { useFuncionarios, useAgenda } from './hooks/useApi'
@@ -34,11 +34,11 @@ function Navigation() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
-  
+
   // Carrega dados da API para os badges
   const { data: funcionarios } = useFuncionarios()
   const { data: agenda } = useAgenda()
-  
+
   // Itens principais (sempre visíveis)
   const mainNavItems = [
     { path: '/', icon: BarChart3, label: 'Dashboard', shortcut: '1', compact: 'Dash' },
@@ -47,7 +47,7 @@ function Navigation() {
     { path: '/demandas', icon: AlertTriangle, label: 'Demandas', shortcut: '4', compact: 'Dem' },
     { path: '/metas', icon: Filter, label: 'Metas & KPIs', shortcut: '5', compact: 'Metas' }
   ]
-  
+
   // Itens secundários (no menu dropdown)
   const secondaryNavItems = [
     { path: '/dashboard-avancado', icon: Clock, label: 'Dashboard Avançado', shortcut: '6' },
@@ -55,7 +55,7 @@ function Navigation() {
     { path: '/relatorios', icon: Users, label: 'Relatórios', shortcut: '8' },
     { path: '/admin', icon: Settings, label: 'Admin', shortcut: '9' }
   ]
-  
+
   const allNavItems = [...mainNavItems, ...secondaryNavItems]
 
   // Keyboard shortcuts
@@ -95,23 +95,22 @@ function Navigation() {
               Workspace Visual
             </h1>
           </div>
-          
+
           {/* Navegação Principal - Desktop */}
           <div className="hidden lg:flex items-center space-x-1 flex-1 justify-center max-w-2xl">
             {mainNavItems.map((item) => {
               const Icon = item.icon
               const isActive = isItemActive(item.path)
-              
+
               return (
                 <Link key={item.path} to={item.path}>
                   <Button
                     variant={isActive ? "default" : "ghost"}
                     size="sm"
-                    className={`flex items-center space-x-2 px-3 py-2 transition-all duration-200 ${
-                      isActive 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' 
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
+                    className={`flex items-center space-x-2 px-3 py-2 transition-all duration-200 ${isActive
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
                   >
                     <Icon className="w-4 h-4" />
                     <span className="font-medium text-sm">{item.label}</span>
@@ -119,7 +118,7 @@ function Navigation() {
                 </Link>
               )
             })}
-            
+
             {/* Menu Dropdown para itens secundários */}
             <div className="relative group">
               <Button
@@ -130,19 +129,18 @@ function Navigation() {
                 <Menu className="w-4 h-4" />
                 <span className="text-sm">Mais</span>
               </Button>
-              
+
               {/* Dropdown Menu */}
               <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="py-1">
                   {secondaryNavItems.map((item) => {
                     const Icon = item.icon
                     const isActive = isItemActive(item.path)
-                    
+
                     return (
                       <Link key={item.path} to={item.path}>
-                        <div className={`flex items-center space-x-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                          isActive ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : 'text-gray-700'
-                        }`}>
+                        <div className={`flex items-center space-x-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${isActive ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : 'text-gray-700'
+                          }`}>
                           <Icon className="w-4 h-4" />
                           <span>{item.label}</span>
                         </div>
@@ -153,23 +151,22 @@ function Navigation() {
               </div>
             </div>
           </div>
-          
+
           {/* Navegação Compacta - Tablet */}
           <div className="hidden md:flex lg:hidden items-center space-x-1 flex-1 justify-center">
             {mainNavItems.map((item) => {
               const Icon = item.icon
               const isActive = isItemActive(item.path)
-              
+
               return (
                 <Link key={item.path} to={item.path}>
                   <Button
                     variant={isActive ? "default" : "ghost"}
                     size="sm"
-                    className={`flex flex-col items-center px-2 py-2 transition-all duration-200 ${
-                      isActive 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' 
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
+                    className={`flex flex-col items-center px-2 py-2 transition-all duration-200 ${isActive
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
                     title={item.label}
                   >
                     <Icon className="w-4 h-4" />
@@ -178,7 +175,7 @@ function Navigation() {
                 </Link>
               )
             })}
-            
+
             {/* Menu Mobile Button */}
             <Button
               variant="ghost"
@@ -190,7 +187,7 @@ function Navigation() {
               <span className="text-xs mt-1">Mais</span>
             </Button>
           </div>
-          
+
           {/* Área Direita */}
           <div className="flex items-center space-x-2 flex-shrink-0">
             {/* Badges - apenas desktop */}
@@ -202,7 +199,7 @@ function Navigation() {
                 {agenda?.length || 0} Tarefas
               </Badge>
             </div>
-            
+
             {/* Search Button */}
             <Button
               variant="ghost"
@@ -213,7 +210,7 @@ function Navigation() {
             >
               <Search className="w-4 h-4" />
             </Button>
-            
+
             {/* Configurações Button */}
             <Button
               variant="ghost"
@@ -224,7 +221,7 @@ function Navigation() {
             >
               <Settings className="w-4 h-4" />
             </Button>
-            
+
             {/* Menu Mobile - apenas mobile */}
             <div className="md:hidden">
               <Button
@@ -249,20 +246,19 @@ function Navigation() {
               {mainNavItems.map((item) => {
                 const Icon = item.icon
                 const isActive = isItemActive(item.path)
-                
+
                 return (
-                  <Link 
-                    key={item.path} 
+                  <Link
+                    key={item.path}
                     to={item.path}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Button
                       variant={isActive ? "default" : "ghost"}
-                      className={`w-full justify-start space-x-3 py-2 ${
-                        isActive 
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
+                      className={`w-full justify-start space-x-3 py-2 ${isActive
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                        }`}
                     >
                       <Icon className="w-4 h-4" />
                       <span className="font-medium">{item.label}</span>
@@ -271,30 +267,29 @@ function Navigation() {
                 )
               })}
             </div>
-            
+
             {/* Separador */}
             <div className="border-t border-gray-200 my-2"></div>
-            
+
             {/* Itens secundários */}
             <div className="space-y-1">
               <div className="text-xs font-medium text-gray-500 px-3 py-1">Mais opções</div>
               {secondaryNavItems.map((item) => {
                 const Icon = item.icon
                 const isActive = isItemActive(item.path)
-                
+
                 return (
-                  <Link 
-                    key={item.path} 
+                  <Link
+                    key={item.path}
                     to={item.path}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Button
                       variant={isActive ? "default" : "ghost"}
-                      className={`w-full justify-start space-x-3 py-2 ${
-                        isActive 
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
+                      className={`w-full justify-start space-x-3 py-2 ${isActive
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                        }`}
                     >
                       <Icon className="w-4 h-4" />
                       <span className="font-medium">{item.label}</span>
@@ -303,7 +298,7 @@ function Navigation() {
                 )
               })}
             </div>
-            
+
             {/* Badges e info no menu mobile */}
             <div className="flex justify-between items-center pt-3 border-t border-gray-200">
               <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50">
@@ -323,9 +318,9 @@ function Navigation() {
         onClose={() => setSearchOpen(false)}
         onNavigate={handleSearchNavigate}
       /> */}
-      
+
       {/* Modal de Configurações */}
-      <ConfiguracoesPessoais 
+      <ConfiguracoesPessoais
         isOpen={configOpen}
         onClose={() => setConfigOpen(false)}
       />
@@ -338,7 +333,7 @@ function AppContent() {
     <Router>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <Navigation />
-        
+
         <main className="max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6 animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
           <div className="transition-all duration-300">
             <Routes>
@@ -356,7 +351,7 @@ function AppContent() {
         </main>
 
         {/* Notification Container */}
-        {/* <NotificationContainer /> */}
+        <NotificationContainer />
       </div>
     </Router>
   )
@@ -364,9 +359,11 @@ function AppContent() {
 
 function App() {
   return (
-    <UserPreferencesProvider>
-      <AppContent />
-    </UserPreferencesProvider>
+    <NotificationProvider>
+      <UserPreferencesProvider>
+        <AppContent />
+      </UserPreferencesProvider>
+    </NotificationProvider>
   )
 }
 
