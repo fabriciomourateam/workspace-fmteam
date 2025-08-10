@@ -39,8 +39,9 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
 
   // Filtrar agendamentos baseado nos filtros e busca
   const agendamentosFiltrados = agenda?.filter(item => {
-    // Filtros por funcionário
-    if (filtros.funcionario_id !== 'todos' && item.funcionario !== filtros.funcionario_id) return false
+    // Filtros por funcionário - corrigir para usar tanto funcionario quanto funcionario_id
+    const funcionarioId = item.funcionario || item.funcionario_id
+    if (filtros.funcionario_id !== 'todos' && funcionarioId !== filtros.funcionario_id) return false
     
     // Filtros por data - garantir formato correto
     const itemData = item.data || new Date().toISOString().split('T')[0]
@@ -56,9 +57,9 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
     
     // Busca por texto
     if (busca) {
-      const funcionario = funcionarios?.find(f => f.id === item.funcionario)
+      const funcionario = item.funcionario?.nome ? item.funcionario : funcionarios?.find(f => f.id === (item.funcionario || item.funcionario_id))
       const buscaLower = busca.toLowerCase()
-      const matchFuncionario = funcionario?.nome.toLowerCase().includes(buscaLower)
+      const matchFuncionario = funcionario?.nome?.toLowerCase().includes(buscaLower)
       const matchData = formatarData(itemData).includes(busca) || itemData.includes(busca)
       const matchHorario = item.horario?.includes(busca) || formatarHorarioIntervalo(item.horario).toLowerCase().includes(buscaLower)
       
@@ -95,6 +96,8 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
       return
     }
 
+    console.log('IDs selecionados para exclusão:', agendamentosSelecionados)
+
     if (!window.confirm(`Tem certeza que deseja excluir ${agendamentosSelecionados.length} agendamento(s) selecionado(s)? Esta ação não pode ser desfeita.`)) {
       return
     }
@@ -102,10 +105,25 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
     setLoading(true)
     try {
       const resultado = await supabaseService.deleteMultipleAgendamentos(agendamentosSelecionados)
-      showSuccess(`${resultado.deleted} agendamento(s) excluído(s) com sucesso!`)
-      onSuccess?.()
-      onClose()
+      console.log('Resultado da exclusão:', resultado)
+      
+      if (resultado.deleted > 0) {
+        showSuccess(`${resultado.deleted} agendamento(s) excluído(s) com sucesso!`)
+        
+        // Aguardar um pouco antes de chamar onSuccess para dar tempo da exclusão ser processada
+        setTimeout(() => {
+          onSuccess?.()
+        }, 500)
+        
+        // Fechar modal após mais um tempo
+        setTimeout(() => {
+          onClose()
+        }, 1000)
+      } else {
+        showError('Nenhum agendamento foi excluído. Verifique se os registros ainda existem.')
+      }
     } catch (error) {
+      console.error('Erro na exclusão:', error)
       showError('Erro ao excluir agendamentos: ' + error.message)
     } finally {
       setLoading(false)
@@ -268,9 +286,10 @@ export default function ExclusaoMassa({ isOpen, onClose, onSuccess }) {
             </CardHeader>
             <CardContent>
               <div className="max-h-80 overflow-y-auto space-y-2">
-                {agendamentosFiltrados.map(agendamento => {
-                  const funcionario = funcionarios?.find(f => f.id === agendamento.funcionario)
-                  const tarefa = tarefas?.find(t => t.id === agendamento.tarefa)
+                {agendamentosFiltrados.map((agendamento, index) => {
+                  // Corrigir acesso aos dados - pode vir com joins do Supabase
+                  const funcionario = agendamento.funcionario?.nome ? agendamento.funcionario : funcionarios?.find(f => f.id === (agendamento.funcionario || agendamento.funcionario_id))
+                  const tarefa = agendamento.tarefa?.nome ? agendamento.tarefa : tarefas?.find(t => t.id === (agendamento.tarefa || agendamento.tarefa_id))
                   const isSelected = agendamentosSelecionados.includes(agendamento.id)
                   
                   return (

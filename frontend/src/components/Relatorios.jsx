@@ -510,49 +510,94 @@ function Relatorios() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header com filtros */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Relatórios</h2>
-          <p className="text-gray-600">Análises e métricas de produtividade da equipe</p>
+    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6 p-6">
+      {/* Elementos decorativos de fundo */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/5 to-indigo-600/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/5 to-pink-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+
+      {/* Header premium com design igual ao cronograma */}
+      <Card className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 border-0 shadow-2xl rounded-3xl">
+        {/* Padrão de fundo decorativo */}
+        <div className="absolute inset-0 opacity-[0.08]">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white rounded-full -translate-y-40 translate-x-40 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-60 h-60 bg-white rounded-full translate-y-30 -translate-x-30 animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-white rounded-full -translate-x-20 -translate-y-20 animate-pulse" style={{ animationDelay: '4s' }}></div>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Select value={tipoRelatorio} onValueChange={setTipoRelatorio}>
-            <SelectTrigger className="w-[180px]">
-              <BarChart className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Tipo de relatório" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="geral">Relatório Geral</SelectItem>
-              <SelectItem value="funcionarios">Por Funcionários</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <div className="flex flex-col gap-2">
-            <div className="text-xs text-gray-600 font-medium">📄 Exportação de Dados:</div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => exportarRelatorio('excel')}
-                className="flex items-center space-x-2"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                <span>Excel</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => exportarRelatorio('csv')}
-                className="flex items-center space-x-2"
-              >
-                <FileText className="w-4 h-4" />
-                <span>CSV</span>
-              </Button>
+
+        <CardHeader className="relative z-10 p-8">
+          <div className="space-y-4">
+            {/* Linha 1: Título e informações */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-xl">
+                    <BarChart className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-tight drop-shadow-lg flex items-center gap-3">
+                      Relatórios
+                      <TrendingUp className="w-6 h-6 animate-pulse" />
+                    </h2>
+                    <p className="text-blue-100 text-lg font-medium mt-1">
+                      Análises e métricas de produtividade da equipe
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
+                    <Target className="w-5 h-5 text-white/90" />
+                    <span className="text-white font-semibold">
+                      {agenda?.length || 0} tarefa{agenda?.length !== 1 ? 's' : ''} analisada{agenda?.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-400/30 px-3 py-1 rounded-full font-semibold">
+                    {Math.round((agenda?.reduce((total, item) => {
+                      const tarefaId = item.tarefa || item.tarefa_id
+                      const tarefa = tarefas?.find(t => t.id === tarefaId)
+                      return total + (tarefa?.tempo_estimado || 30)
+                    }, 0) || 0) / 60)}h de trabalho
+                  </Badge>
+                </div>
+              </div>
+              
+              {/* Controles premium */}
+              <div className="flex flex-col gap-3 bg-white/15 backdrop-blur-md rounded-2xl p-4 shadow-lg">
+                <Select value={tipoRelatorio} onValueChange={setTipoRelatorio}>
+                  <SelectTrigger className="w-[200px] bg-white/20 border-white/30 text-white placeholder:text-white/70 focus:ring-white/50">
+                    <BarChart className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Tipo de relatório" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geral">Relatório Geral</SelectItem>
+                    <SelectItem value="funcionarios">Por Funcionários</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => exportarRelatorio('excel')}
+                    className="text-white hover:bg-white/20 rounded-xl px-3 py-2 font-medium flex items-center gap-2"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span>Excel</span>
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => exportarRelatorio('csv')}
+                    className="text-white hover:bg-white/20 rounded-xl px-3 py-2 font-medium flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>CSV</span>
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </CardHeader>
+      </Card>
 
       {/* Conteúdo do relatório */}
       <div id="relatorio-container" style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>

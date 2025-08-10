@@ -13,11 +13,20 @@ import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { useNotifications } from '../contexts/NotificationContext'
 import { formatarHorarioIntervalo } from '../utils/timeUtils'
 import dataService from '../services/dataService'
+import ExclusaoMassa from './ExclusaoMassa'
+import AgendamentoForm from './forms/AgendamentoForm'
 
 function Admin() {
   const [modalAberto, setModalAberto] = useState(false)
   const [tipoModal, setTipoModal] = useState('') // 'funcionario', 'tarefa', 'agendamento'
   const [itemEditando, setItemEditando] = useState(null)
+  const [exclusaoMassaOpen, setExclusaoMassaOpen] = useState(false)
+  
+  // Estados para AgendamentoForm
+  const [agendamentoFormOpen, setAgendamentoFormOpen] = useState(false)
+  const [editingAgendamento, setEditingAgendamento] = useState(null)
+  const [novoAgendamento, setNovoAgendamento] = useState({ horario: '', funcionario_id: '' })
+  
   const { addNotification } = useNotifications()
 
   // Carrega dados da API
@@ -28,16 +37,15 @@ function Admin() {
   // Estados de loading e error
   const isLoading = loadingFuncionarios || loadingTarefas || loadingAgenda
   
-  // Debug logs
-  console.log('Admin Debug:', {
-    funcionarios: funcionarios?.length,
-    tarefas: tarefas?.length,
-    agenda: agenda?.length,
-    isLoading,
-    loadingFuncionarios,
-    loadingTarefas,
-    loadingAgenda
-  })
+  // Debug logs (apenas em desenvolvimento)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Admin Debug:', {
+      funcionarios: funcionarios?.length,
+      tarefas: tarefas?.length,
+      agenda: agenda?.length,
+      isLoading
+    })
+  }
 
   const abrirModal = (tipo, item = null) => {
     setTipoModal(tipo)
@@ -49,6 +57,74 @@ function Admin() {
     setModalAberto(false)
     setTipoModal('')
     setItemEditando(null)
+  }
+
+  const handleExclusaoMassaSuccess = () => {
+    console.log('🔄 Forçando atualização dos dados com limpeza de cache...')
+    
+    // Limpar cache do dataService
+    dataService.clearCache('agenda')
+    
+    // Recarregar com força total
+    refetchAgenda(true)
+    
+    // Recarregar novamente após um delay para garantir
+    setTimeout(() => {
+      console.log('🔄 Segunda tentativa de atualização...')
+      dataService.clearCache()
+      refetchAgenda(true)
+    }, 1000)
+    
+    addNotification({
+      type: 'success',
+      title: 'Sucesso',
+      message: 'Exclusão em massa realizada com sucesso'
+    })
+  }
+
+  // Handlers para AgendamentoForm
+  const handleAddAgendamento = () => {
+    setNovoAgendamento({ horario: '', funcionario_id: '' })
+    setEditingAgendamento(null)
+    setAgendamentoFormOpen(true)
+  }
+
+  const handleEditAgendamento = (agendamento) => {
+    const agendamentoFormatado = {
+      ...agendamento,
+      funcionario_id: agendamento.funcionario || agendamento.funcionario_id,
+      tarefa_id: agendamento.tarefa || agendamento.tarefa_id
+    }
+    setEditingAgendamento(agendamentoFormatado)
+    setAgendamentoFormOpen(true)
+  }
+
+  const handleSaveAgendamento = async (agendamentoData) => {
+    try {
+      if (editingAgendamento) {
+        await dataService.updateAgendamento(editingAgendamento.id, agendamentoData)
+        addNotification({
+          type: 'success',
+          title: 'Sucesso',
+          message: 'Agendamento atualizado com sucesso'
+        })
+      } else {
+        await dataService.createAgendamento(agendamentoData)
+        addNotification({
+          type: 'success',
+          title: 'Sucesso',
+          message: 'Agendamento criado com sucesso'
+        })
+      }
+      refetchAgenda()
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: error.message || 'Erro ao salvar agendamento'
+      })
+      throw error
+    }
   }
 
   // Componente para gerenciar funcionários
@@ -633,76 +709,33 @@ function Admin() {
 
     return (
       <div className="space-y-6">
-        <div>
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Gerenciar Agenda</h3>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {agenda?.length || 0} agendamentos ativos
-          </p>
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Gerenciar Agenda</h3>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              {agenda?.length || 0} agendamentos ativos
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              onClick={handleAddAgendamento}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Agendamento
+            </Button>
+            <Button 
+              onClick={() => setExclusaoMassaOpen(true)}
+              variant="outline"
+              className="border-red-200 text-red-600 hover:bg-red-50 px-6 py-3 rounded-xl"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Exclusão em Massa
+            </Button>
+          </div>
         </div>
         
-        {/* Formulário para adicionar agendamento */}
-        <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
-              Adicionar Agendamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <Label htmlFor="agenda-horario">Horário</Label>
-                <Input
-                  id="agenda-horario"
-                  type="time"
-                  value={formData.horario}
-                  onChange={(e) => setFormData({...formData, horario: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label htmlFor="agenda-funcionario">Funcionário</Label>
-                <Select value={formData.funcionario} onValueChange={(value) => setFormData({...formData, funcionario: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um funcionário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {funcionarios?.map(funcionario => (
-                      <SelectItem key={funcionario.id} value={funcionario.id}>
-                        {funcionario.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="agenda-tarefa">Tarefa</Label>
-                <Select value={formData.tarefa} onValueChange={(value) => setFormData({...formData, tarefa: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma tarefa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tarefas?.map(tarefa => (
-                      <SelectItem key={tarefa.id} value={tarefa.id}>
-                        {tarefa.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end">
-                <Button 
-                  onClick={() => {
-                    console.log('Botão agendamento clicado!')
-                    adicionarAgendamento()
-                  }} 
-                  className="w-full bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Adicionar
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
 
         {/* Lista de agendamentos */}
         <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg rounded-2xl">
@@ -714,11 +747,17 @@ function Admin() {
           <CardContent>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {agenda?.map((item, index) => {
-                const funcionario = funcionarios?.find(f => f.id === item.funcionario)
-                const tarefa = tarefas?.find(t => t.id === item.tarefa)
+                // Se os dados vêm do Supabase com joins, usar os objetos aninhados
+                const funcionario = item.funcionario?.nome ? item.funcionario : funcionarios?.find(f => f.id === (item.funcionario || item.funcionario_id))
+                const tarefa = item.tarefa?.nome ? item.tarefa : tarefas?.find(t => t.id === (item.tarefa || item.tarefa_id))
                 
                 return (
-                  <div key={item.id || index} className="group flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl hover:shadow-md transition-all duration-300">
+                  <div 
+                    key={item.id || index} 
+                    className="group flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl hover:shadow-md transition-all duration-300 cursor-pointer"
+                    onClick={() => handleEditAgendamento(item)}
+                    title="Clique para editar"
+                  >
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col gap-1">
                         <Badge className="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg text-xs font-medium">
@@ -731,25 +770,43 @@ function Admin() {
                       <div className="flex items-center gap-2">
                         <div 
                           className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: funcionario?.cor }}
+                          style={{ backgroundColor: funcionario?.cor || '#6b7280' }}
                         />
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {funcionario?.nome || item.funcionario_nome}
+                          {funcionario?.nome || item.funcionario_nome || 'Funcionário não encontrado'}
                         </span>
                       </div>
                       <span className="text-gray-400">→</span>
                       <Badge className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg text-xs font-medium">
-                        {tarefa?.nome || item.tarefa_nome}
+                        {tarefa?.nome || item.tarefa_nome || 'Tarefa não encontrada'}
                       </Badge>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => excluirAgendamento(item.id || index)}
-                      className="opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 transition-all duration-300 rounded-lg p-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditAgendamento(item)
+                        }}
+                        className="opacity-0 group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600 transition-all duration-300 rounded-lg p-2"
+                        title="Editar agendamento"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          excluirAgendamento(item.id || index)
+                        }}
+                        className="opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 transition-all duration-300 rounded-lg p-2"
+                        title="Excluir agendamento"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 )
               })}
@@ -769,17 +826,17 @@ function Admin() {
     )
   }
 
-  // Remover o loading para debug - sempre renderizar a interface
-  // if (isLoading) {
-  //   return (
-  //     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6 flex items-center justify-center">
-  //       <div className="text-center">
-  //         <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
-  //         <p className="text-lg font-medium text-gray-700 dark:text-gray-300">Carregando dados...</p>
-  //       </div>
-  //     </div>
-  //   )
-  // }
+  // Loading state - mostrar apenas se todos os dados estão carregando
+  if (isLoading && !funcionarios && !tarefas && !agenda) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg font-medium text-gray-700 dark:text-gray-300">Carregando dados...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6 p-6">
@@ -886,6 +943,95 @@ function Admin() {
             <GerenciarAgenda />
           </TabsContent>
       </Tabs>
+
+      {/* Modal de Agendamento */}
+      <Dialog open={modalAberto && tipoModal === 'agendamento'} onOpenChange={fecharModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Novo Agendamento
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="agendamento-data">Data</Label>
+                <Input
+                  id="agendamento-data"
+                  type="date"
+                  defaultValue={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div>
+                <Label htmlFor="agendamento-horario">Horário</Label>
+                <Input
+                  id="agendamento-horario"
+                  type="time"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="agendamento-funcionario">Funcionário</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um funcionário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {funcionarios?.map(funcionario => (
+                    <SelectItem key={funcionario.id} value={funcionario.id}>
+                      {funcionario.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="agendamento-tarefa">Tarefa</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma tarefa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tarefas?.map(tarefa => (
+                    <SelectItem key={tarefa.id} value={tarefa.id}>
+                      {tarefa.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={fecharModal}>
+                <X className="w-4 h-4 mr-2" />
+                Cancelar
+              </Button>
+              <Button>
+                <Save className="w-4 h-4 mr-2" />
+                Salvar Agendamento
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Agendamento */}
+      <AgendamentoForm
+        isOpen={agendamentoFormOpen}
+        onClose={() => setAgendamentoFormOpen(false)}
+        agendamento={editingAgendamento}
+        funcionarios={funcionarios || []}
+        tarefas={tarefas || []}
+        onSave={handleSaveAgendamento}
+        horarioInicial={novoAgendamento.horario}
+        funcionarioInicial={novoAgendamento.funcionario_id}
+      />
+
+      {/* Modal de Exclusão em Massa */}
+      <ExclusaoMassa
+        isOpen={exclusaoMassaOpen}
+        onClose={() => setExclusaoMassaOpen(false)}
+        onSuccess={handleExclusaoMassaSuccess}
+      />
     </div>
   )
 }

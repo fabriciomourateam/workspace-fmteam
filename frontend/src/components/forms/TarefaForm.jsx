@@ -24,9 +24,8 @@ export default function TarefaForm({
   tarefa = null, 
   onSave 
 }) {
-  // const { showSuccess, showError } = useNotifications()
-  const showSuccess = (message) => console.log('Sucesso:', message)
-  const showError = (message) => console.error('Erro:', message)
+  const showSuccess = (message) => alert('✅ ' + message)
+  const showError = (message) => alert('❌ ' + message)
   const [loading, setLoading] = useState(false)
   
   const [formData, setFormData] = useState({

@@ -42,10 +42,16 @@ export function useApi(apiCall, dependencies = []) {
     };
   }, dependencies);
 
-  const refetch = async () => {
+  const refetch = async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Se forceRefresh, limpar o cache primeiro
+      if (forceRefresh) {
+        setData(null);
+      }
+      
       const result = await apiCall();
       setData(result);
     } catch (err) {

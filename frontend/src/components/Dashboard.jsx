@@ -4,8 +4,10 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Users, Clock, CheckCircle, TrendingUp, Filter, Activity, BarChart3, Sparkles, Timer, Target, Award, ArrowUp } from 'lucide-react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts'
-import { useTheme } from '../contexts/ThemeContext'
-import agendaData from '../data/agenda.json'
+// import { useTheme } from '../contexts/ThemeContext'
+import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
+import { Loading } from './ui/loading'
+import { ErrorMessage } from './ui/error'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#84cc16']
 
@@ -13,13 +15,13 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'
 const AnimatedNumber = ({ value, duration = 1500, suffix = '' }) => {
   const [displayValue, setDisplayValue] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
-  
+
   useEffect(() => {
     setIsAnimating(true)
     let start = 0
     const end = parseInt(value) || 0
     const increment = end / (duration / 16)
-    
+
     const timer = setInterval(() => {
       start += increment
       if (start >= end) {
@@ -30,10 +32,10 @@ const AnimatedNumber = ({ value, duration = 1500, suffix = '' }) => {
         setDisplayValue(Math.floor(start))
       }
     }, 16)
-    
+
     return () => clearInterval(timer)
   }, [value, duration])
-  
+
   return (
     <span className={`transition-all duration-300 ${isAnimating ? 'scale-110' : 'scale-100'}`}>
       {displayValue}{suffix}
@@ -44,39 +46,54 @@ const AnimatedNumber = ({ value, duration = 1500, suffix = '' }) => {
 function Dashboard() {
   const [filtroFuncionario, setFiltroFuncionario] = useState('todos')
   const [filtroHorario, setFiltroHorario] = useState('todos')
-  const { isDark } = useTheme()
+  // const { isDark } = useTheme()
+  const isDark = false // Fallback para tema claro
+
+  // Carrega dados reais da API
+  const { data: funcionarios, loading: loadingFuncionarios, error: errorFuncionarios } = useFuncionarios()
+  const { data: tarefas, loading: loadingTarefas, error: errorTarefas } = useTarefas()
+  const { data: agenda, loading: loadingAgenda, error: errorAgenda } = useAgenda()
+
+  // Estados de loading e error
+  const isLoading = loadingFuncionarios || loadingTarefas || loadingAgenda
+  const hasError = errorFuncionarios || errorTarefas || errorAgenda
+  const error = errorFuncionarios || errorTarefas || errorAgenda
 
   // Dados filtrados
   const dadosFiltrados = useMemo(() => {
-    let agenda = agendaData.agenda
+    if (!agenda) return []
     
+    let agendaFiltrada = agenda
+
     if (filtroFuncionario !== 'todos') {
-      agenda = agenda.filter(item => item.funcionario === filtroFuncionario)
+      agendaFiltrada = agendaFiltrada.filter(item => item.funcionario === filtroFuncionario)
     }
-    
+
     if (filtroHorario !== 'todos') {
       const [inicio, fim] = filtroHorario.split('-')
-      agenda = agenda.filter(item => {
+      agendaFiltrada = agendaFiltrada.filter(item => {
         const hora = parseInt(item.horario.split(':')[0])
         return hora >= parseInt(inicio) && hora < parseInt(fim)
       })
     }
-    
-    return agenda
-  }, [filtroFuncionario, filtroHorario])
+
+    return agendaFiltrada
+  }, [agenda, filtroFuncionario, filtroHorario])
 
   // Estatísticas gerais
   const estatisticas = useMemo(() => {
+    if (!dadosFiltrados || !tarefas) return { totalTarefas: 0, funcionariosAtivos: 0, tempoTotal: 0, categorias: {} }
+    
     const totalTarefas = dadosFiltrados.length
     const funcionariosAtivos = new Set(dadosFiltrados.map(item => item.funcionario)).size
     const tempoTotal = dadosFiltrados.reduce((acc, item) => {
-      const tarefa = agendaData.tarefas.find(t => t.id === item.tarefa)
-      return acc + (tarefa ? tarefa.tempoEstimado : 0)
+      const tarefa = tarefas.find(t => t.id === item.tarefa)
+      return acc + (tarefa ? (tarefa.tempo_estimado || tarefa.tempoEstimado || 30) : 30)
     }, 0)
-    
+
     const categorias = {}
     dadosFiltrados.forEach(item => {
-      const tarefa = agendaData.tarefas.find(t => t.id === item.tarefa)
+      const tarefa = tarefas.find(t => t.id === item.tarefa)
       if (tarefa) {
         categorias[tarefa.categoria] = (categorias[tarefa.categoria] || 0) + 1
       }
@@ -88,14 +105,18 @@ function Dashboard() {
       tempoTotal,
       categorias
     }
-  }, [dadosFiltrados])
+  }, [dadosFiltrados, tarefas])
 
   // Dados para gráficos
   const dadosGraficos = useMemo(() => {
+    if (!dadosFiltrados || !funcionarios) return { dadosFuncionarios: [], dadosCategorias: [], dadosHorario: [], produtividade: [] }
+    
     // Distribuição por funcionário
     const porFuncionario = {}
     dadosFiltrados.forEach(item => {
-      porFuncionario[item.funcionario] = (porFuncionario[item.funcionario] || 0) + 1
+      const funcionario = funcionarios.find(f => f.id === item.funcionario)
+      const nomeFuncionario = funcionario ? funcionario.nome : item.funcionario
+      porFuncionario[nomeFuncionario] = (porFuncionario[nomeFuncionario] || 0) + 1
     })
 
     const dadosFuncionarios = Object.entries(porFuncionario).map(([nome, quantidade]) => ({
@@ -125,13 +146,13 @@ function Dashboard() {
     }))
 
     // Dados de produtividade por hora
-    const produtividade = Array.from({length: 12}, (_, i) => {
+    const produtividade = Array.from({ length: 12 }, (_, i) => {
       const hora = i + 8 // 8h às 19h
       const tarefasHora = dadosFiltrados.filter(item => {
         const horaItem = parseInt(item.horario.split(':')[0])
         return horaItem === hora
       }).length
-      
+
       return {
         hora: `${hora}:00`,
         tarefas: tarefasHora,
@@ -145,21 +166,21 @@ function Dashboard() {
       dadosHorario,
       produtividade
     }
-  }, [dadosFiltrados, estatisticas])
+  }, [dadosFiltrados, estatisticas, funcionarios])
 
   const StatCard = ({ title, value, subtitle, icon: Icon, gradient, trend, delay = 0, change = null }) => (
-    <Card className={`group relative overflow-hidden transition-all duration-700 hover:scale-[1.03] hover:shadow-2xl hover:-translate-y-1 border-0 ${gradient} backdrop-blur-sm animate-fade-in-up`} 
-          style={{ animationDelay: `${delay}ms` }}>
+    <Card className={`group relative overflow-hidden transition-all duration-700 hover:scale-[1.03] hover:shadow-2xl hover:-translate-y-1 border-0 ${gradient} backdrop-blur-sm animate-pulse`}
+      style={{ animationDelay: `${delay}ms` }}>
       {/* Efeito de brilho animado melhorado */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1500 ease-out"></div>
-      
+
       {/* Padrão de fundo decorativo aprimorado */}
       <div className="absolute inset-0 opacity-[0.08]">
         <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full -translate-y-20 translate-x-20 animate-pulse"></div>
         <div className="absolute bottom-0 left-0 w-28 h-28 bg-white rounded-full translate-y-14 -translate-x-14 animate-pulse" style={{ animationDelay: '1s' }}></div>
         <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white rounded-full -translate-x-8 -translate-y-8 animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
-      
+
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 relative z-10">
         <div className="space-y-2">
           <CardTitle className="text-sm font-semibold text-white/95 tracking-wide uppercase letter-spacing-wider">
@@ -176,11 +197,11 @@ function Dashboard() {
           <Icon className="h-7 w-7 text-white drop-shadow-lg" />
         </div>
       </CardHeader>
-      
+
       <CardContent className="relative z-10 pt-0">
         <div className="text-5xl font-black text-white mb-2 tracking-tight drop-shadow-lg">
-          <AnimatedNumber 
-            value={typeof value === 'string' ? value.replace(/\D/g, '') : value} 
+          <AnimatedNumber
+            value={typeof value === 'string' ? value.replace(/\D/g, '') : value}
             suffix={typeof value === 'string' && value.includes('h') ? 'h' : typeof value === 'string' && value.includes('m') ? 'm' : ''}
           />
         </div>
@@ -188,10 +209,10 @@ function Dashboard() {
           {subtitle}
         </p>
       </CardContent>
-      
+
       {/* Borda inferior com gradiente aprimorada */}
       <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-white/30 via-white/60 to-white/30 group-hover:h-2 transition-all duration-300"></div>
-      
+
       {/* Efeito de partículas */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
         <div className="absolute top-4 right-4 w-1 h-1 bg-white rounded-full animate-ping"></div>
@@ -200,6 +221,28 @@ function Dashboard() {
       </div>
     </Card>
   )
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6 p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loading />
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (hasError) {
+    return (
+      <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6 p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <ErrorMessage message={error?.message || 'Erro ao carregar dados do dashboard'} />
+        </div>
+      </div>
+    )
+  }
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -225,171 +268,92 @@ function Dashboard() {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/10 to-pink-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
         <div className="absolute top-1/2 left-1/2 w-60 h-60 bg-gradient-to-br from-emerald-400/5 to-teal-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
       </div>
-      
-      <style jsx>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(40px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        @keyframes slideInLeft {
-          from {
-            opacity: 0;
-            transform: translateX(-50px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        
-        @keyframes slideInRight {
-          from {
-            opacity: 0;
-            transform: translateX(50px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-15px);
-          }
-        }
-        
-        @keyframes glow {
-          0%, 100% {
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-          }
-          50% {
-            box-shadow: 0 0 40px rgba(59, 130, 246, 0.6);
-          }
-        }
-        
-        .animate-fade-in-up {
-          animation: fadeInUp 0.8s ease-out forwards;
-        }
-        
-        .animate-slide-in-left {
-          animation: slideInLeft 0.8s ease-out forwards;
-        }
-        
-        .animate-slide-in-right {
-          animation: slideInRight 0.8s ease-out forwards;
-        }
-        
-        .animate-float {
-          animation: float 8s ease-in-out infinite;
-        }
-        
-        .animate-glow {
-          animation: glow 3s ease-in-out infinite;
-        }
-        
-        .hover-lift:hover {
-          transform: translateY(-4px);
-        }
-        
-        .hover-scale:hover {
-          transform: scale(1.08);
-        }
-        
-        .glass-effect {
-          backdrop-filter: blur(20px);
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .dark .glass-effect {
-          background: rgba(0, 0, 0, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-      `}</style>
-      {/* Header com gradiente aprimorado */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 p-10 mb-4 animate-fade-in-up shadow-2xl">
-        {/* Padrão de fundo decorativo melhorado */}
+
+
+      {/* Header premium com design igual ao cronograma */}
+      <Card className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 border-0 shadow-2xl rounded-3xl">
+        {/* Padrão de fundo decorativo */}
         <div className="absolute inset-0 opacity-[0.08]">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-white rounded-full -translate-y-40 translate-x-40 animate-float"></div>
-          <div className="absolute bottom-0 left-0 w-60 h-60 bg-white rounded-full translate-y-30 -translate-x-30 animate-float" style={{ animationDelay: '2s' }}></div>
-          <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-white rounded-full -translate-x-20 -translate-y-20 animate-float" style={{ animationDelay: '4s' }}></div>
-          <div className="absolute top-1/4 right-1/4 w-24 h-24 bg-white rounded-full animate-float" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute bottom-1/4 left-1/4 w-32 h-32 bg-white rounded-full animate-float" style={{ animationDelay: '3s' }}></div>
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white rounded-full -translate-y-40 translate-x-40 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-60 h-60 bg-white rounded-full translate-y-30 -translate-x-30 animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-white rounded-full -translate-x-20 -translate-y-20 animate-pulse" style={{ animationDelay: '4s' }}></div>
         </div>
-        
-        {/* Efeito de brilho no header */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse"></div>
-        
-        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8">
-          <div className="space-y-4 animate-slide-in-left">
-            <div className="flex items-center gap-4">
-              <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-md shadow-xl animate-glow">
-                <BarChart3 className="h-10 w-10 text-white drop-shadow-lg" />
-              </div>
+
+        <CardHeader className="relative z-10 p-8">
+          <div className="space-y-4">
+            {/* Linha 1: Título e informações */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div>
-                <h1 className="text-4xl font-black text-white tracking-tight drop-shadow-lg">
-                  Dashboard Premium ✨
-                </h1>
-                <div className="flex items-center gap-3 text-blue-100 mt-2">
-                  <Sparkles className="h-5 w-5 animate-pulse" />
-                  <span className="text-base font-semibold">Análise em tempo real</span>
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-xl">
+                    <BarChart3 className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-tight drop-shadow-lg flex items-center gap-3">
+                      Dashboard
+                      <Sparkles className="w-6 h-6 animate-pulse" />
+                    </h2>
+                    <p className="text-blue-100 text-lg font-medium mt-1">
+                      Visão geral das atividades e performance da equipe
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
+                    <CheckCircle className="w-5 h-5 text-white/90" />
+                    <span className="text-white font-semibold">
+                      {estatisticas.totalTarefas} tarefas
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
+                    <Users className="w-5 h-5 text-white/90" />
+                    <span className="text-white font-semibold">
+                      {estatisticas.funcionariosAtivos} funcionários
+                    </span>
+                  </div>
+                  <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-400/30 px-3 py-1 rounded-full font-semibold">
+                    {Math.floor(estatisticas.tempoTotal / 60)}h {estatisticas.tempoTotal % 60}m
+                  </Badge>
                 </div>
               </div>
+              
+              {/* Filtros premium */}
+              <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md rounded-2xl p-2 shadow-lg">
+                <Select value={filtroFuncionario} onValueChange={setFiltroFuncionario}>
+                  <SelectTrigger className="w-56 bg-white/10 border-white/20 text-white hover:bg-white/20 transition-all duration-300 rounded-xl">
+                    <Filter className="h-4 w-4 mr-2 text-white/90" />
+                    <SelectValue placeholder="Filtrar por funcionário" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 rounded-xl shadow-xl">
+                    <SelectItem value="todos">Todos os funcionários</SelectItem>
+                    {funcionarios?.map(func => (
+                      <SelectItem key={func.id} value={func.id}>
+                        {func.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filtroHorario} onValueChange={setFiltroHorario}>
+                  <SelectTrigger className="w-48 bg-white/10 border-white/20 text-white hover:bg-white/20 transition-all duration-300 rounded-xl">
+                    <Clock className="h-4 w-4 mr-2 text-white/90" />
+                    <SelectValue placeholder="Período" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 rounded-xl shadow-xl">
+                    <SelectItem value="todos">Todo o dia</SelectItem>
+                    <SelectItem value="8-12">Manhã (8h-12h)</SelectItem>
+                    <SelectItem value="12-18">Tarde (12h-18h)</SelectItem>
+                    <SelectItem value="18-22">Noite (18h-22h)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <p className="text-blue-100 text-xl max-w-lg leading-relaxed font-medium">
-              Visão geral das atividades e performance da equipe com insights avançados
-            </p>
           </div>
-          
-          <div className="flex flex-wrap gap-4 animate-slide-in-right">
-            <Select value={filtroFuncionario} onValueChange={setFiltroFuncionario}>
-              <SelectTrigger className="w-56 bg-white/15 backdrop-blur-md border-white/30 text-white hover:bg-white/25 transition-all duration-300 rounded-xl shadow-lg hover:shadow-xl">
-                <Filter className="h-5 w-5 mr-2 text-white/90" />
-                <SelectValue placeholder="Filtrar por funcionário" />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 rounded-xl shadow-xl">
-                <SelectItem value="todos">Todos os funcionários</SelectItem>
-                {agendaData.funcionarios.map(func => (
-                  <SelectItem key={func.id} value={func.id}>
-                    {func.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={filtroHorario} onValueChange={setFiltroHorario}>
-              <SelectTrigger className="w-48 bg-white/15 backdrop-blur-md border-white/30 text-white hover:bg-white/25 transition-all duration-300 rounded-xl shadow-lg hover:shadow-xl">
-                <Clock className="h-5 w-5 mr-2 text-white/90" />
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 rounded-xl shadow-xl">
-                <SelectItem value="todos">Todo o dia</SelectItem>
-                <SelectItem value="8-12">Manhã (8h-12h)</SelectItem>
-                <SelectItem value="12-18">Tarde (12h-18h)</SelectItem>
-                <SelectItem value="18-22">Noite (18h-22h)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
-        {/* Borda inferior decorativa */}
-        <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 opacity-60"></div>
-      </div>
+        </CardHeader>
+      </Card>
 
       {/* Cards de estatísticas com gradientes premium */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total de Tarefas"
           value={estatisticas.totalTarefas}
@@ -433,14 +397,14 @@ function Dashboard() {
       </div>
 
       {/* Gráficos principais com design premium */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Distribuição por Funcionário */}
-        <Card className="group relative overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white dark:bg-gray-800 border-0 shadow-xl rounded-2xl animate-fade-in-up">
+        <Card className="group relative overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white/80 backdrop-blur-md dark:bg-gray-800/80 border-0 shadow-lg rounded-2xl">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-purple-50/40 dark:from-blue-900/20 dark:via-indigo-900/15 dark:to-purple-900/10"></div>
-          
+
           {/* Efeito de brilho no hover */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          
+
           <CardHeader className="relative z-10 pb-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -460,22 +424,22 @@ function Dashboard() {
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={dadosGraficos.dadosFuncionarios} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} opacity={0.4} />
-                <XAxis 
-                  dataKey="nome" 
+                <XAxis
+                  dataKey="nome"
                   stroke={isDark ? '#9ca3af' : '#6b7280'}
                   fontSize={13}
                   fontWeight={500}
                   tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }}
                 />
-                <YAxis 
-                  stroke={isDark ? '#9ca3af' : '#6b7280'} 
-                  fontSize={13} 
+                <YAxis
+                  stroke={isDark ? '#9ca3af' : '#6b7280'}
+                  fontSize={13}
                   fontWeight={500}
-                  tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }} 
+                  tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar 
-                  dataKey="quantidade" 
+                <Bar
+                  dataKey="quantidade"
                   fill="url(#barGradientNew)"
                   radius={[8, 8, 0, 0]}
                   className="hover:opacity-90 transition-all duration-300"
@@ -493,12 +457,12 @@ function Dashboard() {
         </Card>
 
         {/* Distribuição por Categoria */}
-        <Card className="group relative overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white dark:bg-gray-800 border-0 shadow-xl rounded-2xl animate-fade-in-up">
+        <Card className="group relative overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white/80 backdrop-blur-md dark:bg-gray-800/80 border-0 shadow-lg rounded-2xl">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-50/80 via-pink-50/60 to-rose-50/40 dark:from-purple-900/20 dark:via-pink-900/15 dark:to-rose-900/10"></div>
-          
+
           {/* Efeito de brilho no hover */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          
+
           <CardHeader className="relative z-10 pb-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -529,8 +493,8 @@ function Dashboard() {
                   strokeWidth={2}
                 >
                   {dadosGraficos.dadosCategorias.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
+                    <Cell
+                      key={`cell-${index}`}
                       fill={entry.cor}
                       className="hover:brightness-110 transition-all duration-300"
                     />
@@ -541,12 +505,12 @@ function Dashboard() {
             </ResponsiveContainer>
             <div className="flex flex-wrap gap-3 mt-8">
               {dadosGraficos.dadosCategorias.map((item, index) => (
-                <Badge 
-                  key={index} 
-                  variant="outline" 
+                <Badge
+                  key={index}
+                  variant="outline"
                   className="text-sm transition-all duration-300 hover:scale-110 hover:shadow-lg px-4 py-2 rounded-full font-medium"
-                  style={{ 
-                    borderColor: item.cor, 
+                  style={{
+                    borderColor: item.cor,
                     color: item.cor,
                     backgroundColor: `${item.cor}15`,
                     borderWidth: '2px'
@@ -561,14 +525,14 @@ function Dashboard() {
       </div>
 
       {/* Gráficos secundários com design premium */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Distribuição por Período */}
-        <Card className="group relative overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white dark:bg-gray-800 border-0 shadow-xl rounded-2xl animate-fade-in-up">
+        <Card className="group relative overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white/80 backdrop-blur-md dark:bg-gray-800/80 border-0 shadow-lg rounded-2xl">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/80 via-teal-50/60 to-cyan-50/40 dark:from-emerald-900/20 dark:via-teal-900/15 dark:to-cyan-900/10"></div>
-          
+
           {/* Efeito de brilho no hover */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          
+
           <CardHeader className="relative z-10 pb-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -588,24 +552,24 @@ function Dashboard() {
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={dadosGraficos.dadosHorario} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} opacity={0.4} />
-                <XAxis 
-                  dataKey="periodo" 
+                <XAxis
+                  dataKey="periodo"
                   stroke={isDark ? '#9ca3af' : '#6b7280'}
                   fontSize={13}
                   fontWeight={500}
                   tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }}
                 />
-                <YAxis 
-                  stroke={isDark ? '#9ca3af' : '#6b7280'} 
-                  fontSize={13} 
+                <YAxis
+                  stroke={isDark ? '#9ca3af' : '#6b7280'}
+                  fontSize={13}
                   fontWeight={500}
-                  tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }} 
+                  tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Area 
-                  type="monotone" 
-                  dataKey="quantidade" 
-                  stroke="#10b981" 
+                <Area
+                  type="monotone"
+                  dataKey="quantidade"
+                  stroke="#10b981"
                   fill="url(#areaGradientNew)"
                   strokeWidth={4}
                   className="hover:opacity-90 transition-opacity duration-300"
@@ -623,12 +587,12 @@ function Dashboard() {
         </Card>
 
         {/* Produtividade por Hora */}
-        <Card className="group relative overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white dark:bg-gray-800 border-0 shadow-xl rounded-2xl animate-fade-in-up">
+        <Card className="group relative overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white/80 backdrop-blur-md dark:bg-gray-800/80 border-0 shadow-lg rounded-2xl">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-50/80 via-orange-50/60 to-red-50/40 dark:from-amber-900/20 dark:via-orange-900/15 dark:to-red-900/10"></div>
-          
+
           {/* Efeito de brilho no hover */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          
+
           <CardHeader className="relative z-10 pb-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -648,35 +612,35 @@ function Dashboard() {
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={dadosGraficos.produtividade} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} opacity={0.4} />
-                <XAxis 
-                  dataKey="hora" 
+                <XAxis
+                  dataKey="hora"
                   stroke={isDark ? '#9ca3af' : '#6b7280'}
                   fontSize={13}
                   fontWeight={500}
                   tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }}
                 />
-                <YAxis 
-                  stroke={isDark ? '#9ca3af' : '#6b7280'} 
-                  fontSize={13} 
+                <YAxis
+                  stroke={isDark ? '#9ca3af' : '#6b7280'}
+                  fontSize={13}
                   fontWeight={500}
-                  tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }} 
+                  tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="tarefas" 
-                  stroke="url(#lineGradient)" 
+                <Line
+                  type="monotone"
+                  dataKey="tarefas"
+                  stroke="url(#lineGradient)"
                   strokeWidth={4}
-                  dot={{ 
-                    fill: '#f59e0b', 
-                    strokeWidth: 3, 
-                    r: 6, 
-                    className: 'hover:r-8 transition-all duration-300' 
+                  dot={{
+                    fill: '#f59e0b',
+                    strokeWidth: 3,
+                    r: 6,
+                    className: 'hover:r-8 transition-all duration-300'
                   }}
-                  activeDot={{ 
-                    r: 10, 
-                    stroke: '#f59e0b', 
-                    strokeWidth: 4, 
+                  activeDot={{
+                    r: 10,
+                    stroke: '#f59e0b',
+                    strokeWidth: 4,
                     fill: '#fff',
                     className: 'animate-pulse'
                   }}
@@ -699,17 +663,17 @@ function Dashboard() {
       <Card className="relative overflow-hidden transition-all duration-700 hover:shadow-3xl hover:-translate-y-3 bg-gradient-to-br from-slate-50 via-blue-50/80 to-indigo-100/90 dark:from-slate-900 dark:via-blue-900/30 dark:to-indigo-900/40 border-0 shadow-2xl rounded-3xl animate-fade-in-up">
         {/* Padrão de fundo decorativo melhorado */}
         <div className="absolute inset-0 opacity-[0.06]">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full -translate-y-60 translate-x-60 animate-float"></div>
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full translate-y-40 -translate-x-40 animate-float" style={{ animationDelay: '2s' }}></div>
-          <div className="absolute top-1/2 left-1/2 w-60 h-60 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full -translate-x-30 -translate-y-30 animate-float" style={{ animationDelay: '4s' }}></div>
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full -translate-y-60 translate-x-60 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full translate-y-40 -translate-x-40 animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-1/2 left-1/2 w-60 h-60 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full -translate-x-30 -translate-y-30 animate-pulse" style={{ animationDelay: '4s' }}></div>
         </div>
-        
+
         {/* Efeito de brilho global */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse"></div>
-        
+
         <CardHeader className="relative z-10 pb-8">
           <div className="flex items-center gap-5">
-            <div className="p-4 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 rounded-3xl shadow-2xl animate-glow">
+            <div className="p-4 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 rounded-3xl shadow-2xl animate-pulse">
               <Sparkles className="h-8 w-8 text-white" />
             </div>
             <div>
@@ -722,15 +686,15 @@ function Dashboard() {
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="group text-center p-8 glass-effect rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 border border-white/30">
-              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 animate-glow">
+            <div className="group text-center p-8 backdrop-blur-md bg-white/10 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 border border-white/30">
+              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 animate-pulse">
                 <Users className="h-10 w-10 text-white" />
               </div>
               <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400 mb-3">
-                <AnimatedNumber value={Math.round((estatisticas.totalTarefas / agendaData.funcionarios.length) * 10) / 10} />
+                <AnimatedNumber value={funcionarios?.length ? Math.round((estatisticas.totalTarefas / funcionarios.length) * 10) / 10 : 0} />
               </div>
               <div className="text-base font-bold text-gray-700 dark:text-gray-300 mb-2">
                 Tarefas por funcionário
@@ -742,9 +706,9 @@ function Dashboard() {
                 <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full animate-pulse" style={{ width: '85%' }}></div>
               </div>
             </div>
-            
-            <div className="group text-center p-8 glass-effect rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 border border-white/30">
-              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 animate-glow">
+
+            <div className="group text-center p-8 backdrop-blur-md bg-white/10 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 border border-white/30">
+              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 animate-pulse">
                 <Timer className="h-10 w-10 text-white" />
               </div>
               <div className="text-4xl font-black text-blue-600 dark:text-blue-400 mb-3">
@@ -760,16 +724,16 @@ function Dashboard() {
                 <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full animate-pulse" style={{ width: '72%' }}></div>
               </div>
             </div>
-            
-            <div className="group text-center p-8 glass-effect rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 border border-white/30">
-              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-purple-400 via-purple-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 animate-glow">
+
+            <div className="group text-center p-8 backdrop-blur-md bg-white/10 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 border border-white/30">
+              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-purple-400 via-purple-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 animate-pulse">
                 <Award className="h-10 w-10 text-white" />
               </div>
               <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mb-3 truncate">
-                {Object.keys(estatisticas.categorias).length > 0 
-                  ? Object.keys(estatisticas.categorias).reduce((a, b) => 
-                      estatisticas.categorias[a] > estatisticas.categorias[b] ? a : b
-                    )
+                {Object.keys(estatisticas.categorias).length > 0
+                  ? Object.keys(estatisticas.categorias).reduce((a, b) =>
+                    estatisticas.categorias[a] > estatisticas.categorias[b] ? a : b
+                  )
                   : 'N/A'
                 }
               </div>
@@ -785,7 +749,7 @@ function Dashboard() {
             </div>
           </div>
         </CardContent>
-        
+
         {/* Borda inferior decorativa */}
         <div className="absolute bottom-0 left-0 right-0 h-3 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-600 opacity-60 rounded-b-3xl"></div>
       </Card>

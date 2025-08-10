@@ -17,9 +17,8 @@ export default function AgendamentoForm({
   funcionarioInicial = '',
   dataInicial = ''
 }) {
-  // const { showSuccess, showError } = useNotifications()
-  const showSuccess = (message) => console.log('Sucesso:', message)
-  const showError = (message) => console.error('Erro:', message)
+  const showSuccess = (message) => alert('✅ ' + message)
+  const showError = (message) => alert('❌ ' + message)
   const [loading, setLoading] = useState(false)
   
   // Hook de personalização
@@ -93,9 +92,10 @@ export default function AgendamentoForm({
     const inicio = new Date(dataInicio + 'T00:00:00')
     const fim = new Date(dataFim + 'T00:00:00')
     
-    console.log('=== DEBUG DATAS RECORRENTES ===')
-    console.log('Data início:', dataInicio, '→', inicio)
-    console.log('Data fim:', dataFim, '→', fim)
+    // Debug apenas em desenvolvimento
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Gerando datas recorrentes:', { dataInicio, dataFim, frequencia })
+    }
     console.log('Dias selecionados:', diasSemana)
     
     for (let data = new Date(inicio); data <= fim; data.setDate(data.getDate() + 1)) {
@@ -109,8 +109,9 @@ export default function AgendamentoForm({
       }
     }
     
-    console.log('Datas geradas:', datas)
-    console.log('=== FIM DEBUG ===')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Datas geradas:', datas.length, 'agendamentos')
+    }
     
     return datas
   }

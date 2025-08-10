@@ -91,11 +91,7 @@ class SupabaseService {
 
   // Agenda
   async getAgenda() {
-    // Buscar apenas os últimos 30 dias para otimizar a consulta
-    const dataLimite = new Date()
-    dataLimite.setDate(dataLimite.getDate() - 30)
-    const dataLimiteStr = dataLimite.toISOString().split('T')[0]
-
+    // Buscar todos os agendamentos sem limite de data ou quantidade
     const { data, error } = await supabase
       .from('agenda')
       .select(`
@@ -103,10 +99,8 @@ class SupabaseService {
         funcionario:funcionarios(nome, cor),
         tarefa:tarefas(nome, categoria)
       `)
-      .gte('data', dataLimiteStr) // Filtrar apenas últimos 30 dias
       .order('data', { ascending: false })
       .order('horario')
-      .limit(10000) // Aumentar o limite para garantir que todos os dados sejam carregados
 
     if (error) throw error
     return data
@@ -144,13 +138,101 @@ class SupabaseService {
 
   // Exclusão em massa de agendamentos
   async deleteMultipleAgendamentos(ids) {
+    console.log('🗑️ Iniciando exclusão de IDs:', ids)
+    
+    if (!ids || ids.length === 0) {
+      console.warn('⚠️ Nenhum ID fornecido para exclusão')
+      return { deleted: 0 }
+    }
+    
+    // Primeiro, verificar quais registros existem
+    const { data: existingRecords, error: checkError } = await supabase
+      .from('agenda')
+      .select('id')
+      .in('id', ids)
+    
+    if (checkError) {
+      console.error('❌ Erro ao verificar registros:', checkError)
+      throw checkError
+    }
+    
+    console.log(`📋 Encontrados ${existingRecords?.length || 0} registros de ${ids.length} solicitados`)
+    
+    if (!existingRecords || existingRecords.length === 0) {
+      console.warn('⚠️ Nenhum registro encontrado para exclusão')
+      return { deleted: 0 }
+    }
+    
+    // Executar exclusão
     const { error } = await supabase
       .from('agenda')
       .delete()
       .in('id', ids)
 
-    if (error) throw error
-    return { deleted: ids.length }
+    if (error) {
+      console.error('❌ Erro na exclusão:', error)
+      throw error
+    }
+    
+    // Verificar se os registros foram realmente excluídos
+    const { data: remainingRecords, error: verifyError } = await supabase
+      .from('agenda')
+      .select('id')
+      .in('id', ids)
+    
+    if (verifyError) {
+      console.warn('⚠️ Erro ao verificar exclusão:', verifyError)
+    } else {
+      const actualDeleted = existingRecords.length - (remainingRecords?.length || 0)
+      console.log(`✅ Exclusão verificada: ${actualDeleted} registros realmente excluídos`)
+      
+      if (remainingRecords && remainingRecords.length > 0) {
+        console.warn(`⚠️ ${remainingRecords.length} registros ainda existem:`, remainingRecords.map(r => r.id))
+      }
+      
+      return { deleted: actualDeleted }
+    }
+    
+    console.log(`✅ Exclusão concluída: ${existingRecords.length} registros`)
+    
+    // Aguardar um pouco para garantir que a exclusão foi processada
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    return { deleted: existingRecords.length }
+  }
+
+  // Método alternativo: exclusão individual em loop (para debug)
+  async deleteMultipleAgendamentosIndividual(ids) {
+    console.log('Tentando exclusão individual para IDs:', ids)
+    let deletedCount = 0
+    const errors = []
+
+    for (const id of ids) {
+      try {
+        const { error } = await supabase
+          .from('agenda')
+          .delete()
+          .eq('id', id)
+
+        if (error) {
+          console.error(`Erro ao excluir ID ${id}:`, error)
+          errors.push({ id, error })
+        } else {
+          deletedCount++
+          console.log(`ID ${id} excluído com sucesso`)
+        }
+      } catch (err) {
+        console.error(`Exceção ao excluir ID ${id}:`, err)
+        errors.push({ id, error: err })
+      }
+    }
+
+    if (errors.length > 0) {
+      console.error('Erros durante exclusão individual:', errors)
+      throw new Error(`Falha ao excluir ${errors.length} de ${ids.length} registros`)
+    }
+
+    return { deleted: deletedCount }
   }
 
   // Exclusão por filtros
@@ -164,40 +246,6 @@ class SupabaseService {
       query = query.eq('data', filters.data)
     }
     if (filters.status && filters.status !== 'todos') {
-      query = query.eq('status', filters.status)
-    }
-    if (filters.data_inicio && filters.data_fim) {
-      query = query.gte('data', filters.data_inicio).lte('data', filters.data_fim)
-    }
-
-    const { error, count } = await query
-
-    if (error) throw error
-    return { deleted: count }
-  }
-
-  // Exclusão em massa de agendamentos
-  async deleteMultipleAgendamentos(ids) {
-    const { error } = await supabase
-      .from('agenda')
-      .delete()
-      .in('id', ids)
-
-    if (error) throw error
-    return { deleted: ids.length }
-  }
-
-  // Exclusão por filtros
-  async deleteAgendamentosByFilter(filters) {
-    let query = supabase.from('agenda').delete()
-
-    if (filters.funcionario_id) {
-      query = query.eq('funcionario_id', filters.funcionario_id)
-    }
-    if (filters.data) {
-      query = query.eq('data', filters.data)
-    }
-    if (filters.status) {
       query = query.eq('status', filters.status)
     }
     if (filters.data_inicio && filters.data_fim) {

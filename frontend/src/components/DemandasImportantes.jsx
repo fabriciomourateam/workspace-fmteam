@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -434,7 +434,78 @@ export default function DemandasImportantes() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6 p-6">
+      {/* Elementos decorativos de fundo */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/5 to-indigo-600/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/5 to-pink-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+
+      {/* Header premium com design igual ao cronograma */}
+      <Card className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 border-0 shadow-2xl rounded-3xl">
+        {/* Padrão de fundo decorativo */}
+        <div className="absolute inset-0 opacity-[0.08]">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white rounded-full -translate-y-40 translate-x-40 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-60 h-60 bg-white rounded-full translate-y-30 -translate-x-30 animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-white rounded-full -translate-x-20 -translate-y-20 animate-pulse" style={{ animationDelay: '4s' }}></div>
+        </div>
+
+        <div className="relative z-10 p-8">
+          <div className="space-y-4">
+            {/* Linha 1: Título e informações */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-xl">
+                    <AlertTriangle className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-tight drop-shadow-lg flex items-center gap-3">
+                      Demandas Importantes
+                      <Target className="w-6 h-6 animate-pulse" />
+                    </h2>
+                    <p className="text-blue-100 text-lg font-medium mt-1">
+                      Acompanhe tarefas prioritárias e prazos críticos
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
+                    <Target className="w-5 h-5 text-white/90" />
+                    <span className="text-white font-semibold">
+                      {stats.total} demandas
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
+                    <Clock className="w-5 h-5 text-white/90" />
+                    <span className="text-white font-semibold">
+                      {stats.pendentes} pendentes
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
+                    <AlertTriangle className="w-5 h-5 text-white/90" />
+                    <span className="text-white font-semibold">
+                      {stats.atrasadas} atrasadas
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Botão de ação premium */}
+              <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md rounded-2xl p-2 shadow-lg">
+                <Button 
+                  onClick={handleNovaDemanda}
+                  className="text-white hover:bg-white/20 rounded-xl px-4 py-2 font-medium bg-white/10"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Demanda
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       {/* Aviso sobre tabela demandas */}
       {error && !demandasData && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -455,21 +526,9 @@ export default function DemandasImportantes() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Demandas Importantes</h2>
-          <p className="text-gray-600">Acompanhe tarefas prioritárias e prazos críticos</p>
-        </div>
-        <Button onClick={handleNovaDemanda} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Nova Demanda
-        </Button>
-      </div>
-
       {/* Estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border-0">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4 text-blue-600" />
@@ -479,7 +538,7 @@ export default function DemandasImportantes() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border-0">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-gray-600" />
@@ -489,7 +548,7 @@ export default function DemandasImportantes() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border-0">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-blue-600" />
@@ -499,7 +558,7 @@ export default function DemandasImportantes() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border-0">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -509,7 +568,7 @@ export default function DemandasImportantes() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border-0">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-red-600" />
@@ -521,7 +580,7 @@ export default function DemandasImportantes() {
       </div>
 
       {/* Filtros */}
-      <Card>
+      <Card className="bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border-0">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
@@ -530,7 +589,7 @@ export default function DemandasImportantes() {
             </div>
             
             <Select value={filtroImportancia} onValueChange={setFiltroImportancia}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[140px] rounded-xl">
                 <SelectValue placeholder="Importância" />
               </SelectTrigger>
               <SelectContent>
@@ -542,7 +601,7 @@ export default function DemandasImportantes() {
             </Select>
 
             <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[140px] rounded-xl">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -554,7 +613,7 @@ export default function DemandasImportantes() {
             </Select>
 
             <Select value={filtroFuncionario} onValueChange={setFiltroFuncionario}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[160px] rounded-xl">
                 <SelectValue placeholder="Funcionário" />
               </SelectTrigger>
               <SelectContent>
@@ -567,7 +626,7 @@ export default function DemandasImportantes() {
               </SelectContent>
             </Select>
 
-            <Badge variant="outline" className="ml-auto">
+            <Badge variant="outline" className="ml-auto bg-blue-50 text-blue-700 border-blue-200 rounded-full px-3 py-1">
               {demandasOrdenadas.length} demanda{demandasOrdenadas.length !== 1 ? 's' : ''}
             </Badge>
           </div>

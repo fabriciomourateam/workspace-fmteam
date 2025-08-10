@@ -12,9 +12,9 @@ import NotificationContainer from './components/NotificationContainer'
 // import GlobalSearch from './components/GlobalSearch'
 import { UserPreferencesProvider } from './contexts/UserPreferencesContext'
 import ConfiguracoesPessoais from './components/ConfiguracoesPessoais'
-import Dashboard from './components/DashboardNew'
-import DashboardAvancado from './components/DashboardAvancado'
-import MetasKPIs from './components/MetasKPIs'
+import Dashboard from './components/Dashboard'
+
+
 import Cronograma from './components/Cronograma'
 import Processos from './components/Processos'
 import DemandasImportantes from './components/DemandasImportantes'
@@ -44,13 +44,12 @@ function Navigation() {
     { path: '/', icon: BarChart3, label: 'Dashboard', shortcut: '1', compact: 'Dash' },
     { path: '/cronograma', icon: Calendar, label: 'Cronograma', shortcut: '2', compact: 'Crono' },
     { path: '/calendario', icon: CalendarDays, label: 'Calendário', shortcut: '3', compact: 'Cal' },
-    { path: '/demandas', icon: AlertTriangle, label: 'Demandas', shortcut: '4', compact: 'Dem' },
-    { path: '/metas', icon: Filter, label: 'Metas & KPIs', shortcut: '5', compact: 'Metas' }
+    { path: '/demandas', icon: AlertTriangle, label: 'Demandas', shortcut: '4', compact: 'Dem' }
   ]
 
   // Itens secundários (no menu dropdown)
   const secondaryNavItems = [
-    { path: '/dashboard-avancado', icon: Clock, label: 'Dashboard Avançado', shortcut: '6' },
+
     { path: '/processos', icon: FileText, label: 'Processos', shortcut: '7' },
     { path: '/relatorios', icon: Users, label: 'Relatórios', shortcut: '8' },
     { path: '/admin', icon: Settings, label: 'Admin', shortcut: '9' }
@@ -338,8 +337,7 @@ function AppContent() {
           <div className="transition-all duration-300">
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/dashboard-avancado" element={<DashboardAvancado />} />
-              <Route path="/metas" element={<MetasKPIs />} />
+
               <Route path="/cronograma" element={<Cronograma />} />
               <Route path="/calendario" element={<CalendarioAgendamentos />} />
               <Route path="/demandas" element={<DemandasImportantes />} />

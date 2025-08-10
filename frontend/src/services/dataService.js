@@ -52,11 +52,22 @@ const STATIC_DATA = {
 class DataService {
   constructor() {
     this.isSupabaseEnabled = USE_SUPABASE;
+    this._cache = new Map();
     console.log('DataService initialized:', {
       supabaseEnabled: this.isSupabaseEnabled,
       hasUrl: !!import.meta.env.VITE_SUPABASE_URL,
       hasKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY
     });
+  }
+
+  // Limpar cache
+  clearCache(key = null) {
+    if (key) {
+      this._cache.delete(key);
+    } else {
+      this._cache.clear();
+    }
+    console.log('🧹 Cache limpo:', key || 'todos');
   }
 
   // Funcionários
@@ -137,16 +148,8 @@ class DataService {
   async getAgenda() {
     if (this.isSupabaseEnabled) {
       try {
-        // Buscar dados de hoje + dados recentes
-        const [agendaHoje, agendaRecente] = await Promise.all([
-          supabaseService.getAgendaHoje(),
-          supabaseService.getAgenda()
-        ]);
-        
-        // Combinar e remover duplicatas
-        const idsHoje = new Set(agendaHoje.map(item => item.id));
-        const agendaFiltrada = agendaRecente.filter(item => !idsHoje.has(item.id));
-        const data = [...agendaHoje, ...agendaFiltrada];
+        // Buscar apenas dados do Supabase (sem duplicação)
+        const data = await supabaseService.getAgenda();
         // Transformar dados do Supabase para formato esperado
         const transformedData = data.map(item => ({
           id: item.id,
