@@ -49,13 +49,16 @@ function Cronograma() {
   // Salvar larguras das colunas no localStorage
   useEffect(() => {
     if (Object.keys(columnWidths).length > 0) {
+      console.log('💾 Salvando larguras das colunas:', columnWidths)
       localStorage.setItem('cronograma-column-widths', JSON.stringify(columnWidths))
     }
   }, [columnWidths])
 
   // Funções para redimensionamento de colunas
   const handleMouseDown = (e, columnId) => {
+    console.log('🖱️ Mouse down iniciado:', { columnId, currentWidth: columnWidths[columnId] || 80 })
     e.preventDefault()
+    e.stopPropagation()
     setIsResizing(true)
     setResizingColumn(columnId)
     
@@ -64,6 +67,7 @@ function Cronograma() {
     
     const handleMouseMove = (e) => {
       const newWidth = Math.max(60, startWidth + (e.clientX - startX))
+      console.log('🖱️ Mouse move:', { columnId, newWidth, startX, currentX: e.clientX })
       setColumnWidths(prev => ({
         ...prev,
         [columnId]: newWidth
@@ -71,6 +75,7 @@ function Cronograma() {
     }
     
     const handleMouseUp = () => {
+      console.log('🖱️ Mouse up:', { columnId, finalWidth: columnWidths[columnId] })
       setIsResizing(false)
       setResizingColumn(null)
       document.removeEventListener('mousemove', handleMouseMove)
@@ -82,7 +87,9 @@ function Cronograma() {
   }
 
   const getColumnWidth = (columnId) => {
-    return columnWidths[columnId] || 80
+    const width = columnWidths[columnId] || 80
+    // console.log('📏 Largura da coluna:', { columnId, width, allWidths: columnWidths })
+    return width
   }
 
   const resetColumnWidths = () => {
@@ -581,26 +588,33 @@ function Cronograma() {
   )
 
   const GridVerticalView = () => (
-    <Card>
+    <Card className={isResizing ? 'select-none' : ''}>
       <CardHeader>
         <CardTitle>Grade Vertical de Horários</CardTitle>
         <CardDescription>
           Visualização em grade vertical com horários nas linhas
+          {isResizing && <span className="text-blue-600 ml-2">(Redimensionando...)</span>}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+      <CardContent style={{ cursor: isResizing ? 'col-resize' : 'default' }}>
+        <div className="overflow-x-auto" style={{ position: 'relative' }}>
+          <table className="w-full border-collapse text-sm" style={{ tableLayout: 'fixed', minWidth: '800px' }}>
             <thead>
               <tr>
-                <th className="border border-gray-200 p-2 bg-gray-50 text-center font-medium text-xs">
+                <th className="border border-gray-200 p-2 bg-gray-50 text-center font-medium text-xs" style={{ width: '120px' }}>
                   Horário
                 </th>
                 {Object.values(cronogramaPorFuncionario).map(funcionario => (
                   <th 
                     key={funcionario.id} 
-                    className="border border-gray-200 p-1 bg-gray-50 text-center font-medium text-xs relative"
-                    style={{ width: `${getColumnWidth(funcionario.id)}px`, minWidth: '60px' }}
+                    className={`border border-gray-200 p-1 bg-gray-50 text-center font-medium text-xs relative overflow-visible ${
+                      resizingColumn === funcionario.id ? 'bg-blue-50' : ''
+                    }`}
+                    style={{ 
+                      width: `${getColumnWidth(funcionario.id)}px`, 
+                      minWidth: '60px',
+                      maxWidth: `${getColumnWidth(funcionario.id)}px`
+                    }}
                   >
                     <div className="flex flex-col items-center justify-center space-y-1">
                       <div 
@@ -612,13 +626,17 @@ function Cronograma() {
                     
                     {/* Handle de redimensionamento */}
                     <div
-                      className={`absolute top-0 right-0 w-1 h-full cursor-col-resize transition-colors ${
+                      className={`absolute top-0 right-0 w-3 h-full cursor-col-resize transition-all duration-200 z-20 ${
                         resizingColumn === funcionario.id 
-                          ? 'bg-blue-500' 
-                          : 'bg-transparent hover:bg-blue-300'
+                          ? 'bg-blue-500 shadow-lg' 
+                          : 'bg-gray-300 hover:bg-blue-400 opacity-50 hover:opacity-100'
                       }`}
                       onMouseDown={(e) => handleMouseDown(e, funcionario.id)}
                       title="Arrastar para redimensionar coluna"
+                      style={{ 
+                        right: '-1px',
+                        borderRadius: '0 2px 2px 0'
+                      }}
                     />
                   </th>
                 ))}
