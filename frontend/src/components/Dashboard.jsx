@@ -63,6 +63,18 @@ function Dashboard() {
   const dadosFiltrados = useMemo(() => {
     if (!agenda) return []
     
+    // Debug da agenda original
+    console.log('📅 Agenda original:', {
+      total: agenda.length,
+      primeiros5: agenda.slice(0, 5).map(item => ({
+        funcionario: item.funcionario,
+        tarefa_id: item.tarefa,
+        tarefa_obj: item.tarefaInfo,
+        horario: item.horario,
+        data: item.data
+      }))
+    })
+    
     let agendaFiltrada = agenda
 
     if (filtroFuncionario !== 'todos') {
@@ -77,32 +89,141 @@ function Dashboard() {
       })
     }
 
+    // Limitar para debug (remover depois)
+    if (agendaFiltrada.length > 100) {
+      console.warn('⚠️ Muitos agendamentos! Limitando para debug:', agendaFiltrada.length)
+      agendaFiltrada = agendaFiltrada.slice(0, 100)
+    }
+
     return agendaFiltrada
   }, [agenda, filtroFuncionario, filtroHorario])
+
+  // Helper para buscar tarefa de forma consistente
+  const buscarTarefa = (item) => {
+    // Agora item.tarefa é o ID da tarefa (string)
+    const tarefaId = item.tarefa || item.tarefa_id
+    return tarefas.find(t => t.id === tarefaId)
+  }
+
+  // Helper para formatar tempo de forma consistente
+  const formatarTempo = (minutos) => {
+    const total = Number(minutos) || 0
+    const horas = Math.floor(total / 60)
+    const mins = total % 60
+    console.log('⏰ Formatando tempo:', { minutos, total, horas, mins, resultado: `${horas}h ${mins}m` })
+    return `${horas}h ${mins}m`
+  }
 
   // Estatísticas gerais
   const estatisticas = useMemo(() => {
     if (!dadosFiltrados || !tarefas) return { totalTarefas: 0, funcionariosAtivos: 0, tempoTotal: 0, categorias: {} }
     
-    const totalTarefas = dadosFiltrados.length
+    // Debug geral
+    console.log('📊 Dashboard Debug:', {
+      dadosFiltrados: dadosFiltrados.length,
+      tarefas: tarefas.length,
+      tarefasIndisponiveis: tarefas.filter(t => t.categoria === 'indisponibilidade').length
+    })
+    
+    // Separar tarefas computadas das não computadas (versão simplificada)
+    const tarefasComputadas = dadosFiltrados.filter((item, index) => {
+      const tarefa = buscarTarefa(item)
+      if (!tarefa) {
+        if (index < 5) {
+          console.log(`❌ Tarefa não encontrada:`, {
+            tarefa: item.tarefa,
+            tarefa_id: item.tarefa_id,
+            tipo_tarefa: typeof item.tarefa,
+            tarefaInfo: item.tarefaInfo
+          })
+        }
+        return false
+      }
+      
+      // Debug das primeiras 5 tarefas
+      if (index < 5) {
+        console.log(`🔍 Tarefa ${index}:`, {
+          id: tarefa.id,
+          nome: tarefa.nome,
+          computar_horas: tarefa.computar_horas,
+          deveComputar: tarefa.computar_horas !== false
+        })
+      }
+      
+      // Lógica robusta: só não computa se explicitamente false
+      // Se for null, undefined ou true, deve computar
+      const deveComputar = tarefa.computar_horas !== false
+      return deveComputar
+    })
+    
+    const totalTarefas = tarefasComputadas.length
+    const totalTarefasGeral = dadosFiltrados.length
     const funcionariosAtivos = new Set(dadosFiltrados.map(item => item.funcionario)).size
-    const tempoTotal = dadosFiltrados.reduce((acc, item) => {
-      const tarefa = tarefas.find(t => t.id === item.tarefa)
-      return acc + (tarefa ? (tarefa.tempo_estimado || tarefa.tempoEstimado || 30) : 30)
+    // Debug geral
+    console.log('📊 Dashboard Debug:', {
+      totalAgendamentos: dadosFiltrados.length,
+      totalTarefasDisponiveis: tarefas?.length,
+      filtroFuncionario: filtroFuncionario
+    })
+
+    // Cálculo unificado de tempo total usando as tarefas já filtradas
+    const tempoTotal = tarefasComputadas.reduce((total, item, index) => {
+      const tarefa = buscarTarefa(item)
+      if (tarefa) {
+        const tempo = tarefa.tempo_estimado || tarefa.tempoEstimado || 30
+        
+        // Debug das primeiras 3 tarefas
+        if (index < 3) {
+          console.log(`⏱️ Item ${index}:`, {
+            tarefa: tarefa.nome,
+            tempo: tempo,
+            computar_horas: tarefa.computar_horas,
+            totalAcumulado: total + tempo
+          })
+        }
+        
+        return total + tempo
+      }
+      return total
     }, 0)
+    
+    console.log('🧮 Cálculo final:', {
+      itensProcessados: dadosFiltrados.length,
+      itensComputados: tarefasComputadas.length,
+      tempoTotal: tempoTotal,
+      tempoMedio: tarefasComputadas.length > 0 ? tempoTotal / tarefasComputadas.length : 0
+    })
+
+    // Debug do resultado final
+    console.log('⏱️ Tempo Total Calculado:', {
+      tempoTotalMinutos: tempoTotal,
+      tempoTotalHoras: Math.floor(tempoTotal / 60),
+      minutosRestantes: tempoTotal % 60,
+      formatado: `${Math.floor(tempoTotal / 60)}h ${tempoTotal % 60}m`,
+      tarefasComputadas: tarefasComputadas.length,
+      totalAgendamentos: dadosFiltrados.length,
+      tipoTempoTotal: typeof tempoTotal
+    })
 
     const categorias = {}
     dadosFiltrados.forEach(item => {
-      const tarefa = tarefas.find(t => t.id === item.tarefa)
-      if (tarefa) {
+      const tarefa = buscarTarefa(item)
+      // Verificar se deve computar
+      const deveComputar = tarefa && (
+        tarefa.hasOwnProperty('computar_horas') ? tarefa.computar_horas !== false :
+        tarefa.categoria !== 'indisponibilidade'
+      )
+      
+      if (deveComputar) {
         categorias[tarefa.categoria] = (categorias[tarefa.categoria] || 0) + 1
       }
     })
 
     return {
       totalTarefas,
+      totalTarefasGeral,
       funcionariosAtivos,
-      tempoTotal,
+      tempoTotal: tempoTotal, // Usar a variável calculada no loop
       categorias
     }
   }, [dadosFiltrados, tarefas])
@@ -111,12 +232,21 @@ function Dashboard() {
   const dadosGraficos = useMemo(() => {
     if (!dadosFiltrados || !funcionarios) return { dadosFuncionarios: [], dadosCategorias: [], dadosHorario: [], produtividade: [] }
     
-    // Distribuição por funcionário
+    // Distribuição por funcionário (apenas tarefas computadas)
     const porFuncionario = {}
     dadosFiltrados.forEach(item => {
-      const funcionario = funcionarios.find(f => f.id === item.funcionario)
-      const nomeFuncionario = funcionario ? funcionario.nome : item.funcionario
-      porFuncionario[nomeFuncionario] = (porFuncionario[nomeFuncionario] || 0) + 1
+      const tarefa = buscarTarefa(item)
+      // Verificar se deve computar
+      const deveComputar = tarefa && (
+        tarefa.hasOwnProperty('computar_horas') ? tarefa.computar_horas !== false :
+        tarefa.categoria !== 'indisponibilidade'
+      )
+      
+      if (deveComputar) {
+        const funcionario = funcionarios.find(f => f.id === item.funcionario)
+        const nomeFuncionario = funcionario ? funcionario.nome : item.funcionario
+        porFuncionario[nomeFuncionario] = (porFuncionario[nomeFuncionario] || 0) + 1
+      }
     })
 
     const dadosFuncionarios = Object.entries(porFuncionario).map(([nome, quantidade]) => ({
@@ -132,12 +262,21 @@ function Dashboard() {
       cor: COLORS[Object.keys(estatisticas.categorias).indexOf(categoria) % COLORS.length]
     }))
 
-    // Distribuição por horário
+    // Distribuição por horário (apenas tarefas computadas)
     const porHorario = {}
     dadosFiltrados.forEach(item => {
-      const hora = parseInt(item.horario.split(':')[0])
-      const periodo = hora < 12 ? 'Manhã' : hora < 18 ? 'Tarde' : 'Noite'
-      porHorario[periodo] = (porHorario[periodo] || 0) + 1
+      const tarefa = buscarTarefa(item)
+      // Verificar se deve computar
+      const deveComputar = tarefa && (
+        tarefa.hasOwnProperty('computar_horas') ? tarefa.computar_horas !== false :
+        tarefa.categoria !== 'indisponibilidade'
+      )
+      
+      if (deveComputar) {
+        const hora = parseInt(item.horario.split(':')[0])
+        const periodo = hora < 12 ? 'Manhã' : hora < 18 ? 'Tarde' : 'Noite'
+        porHorario[periodo] = (porHorario[periodo] || 0) + 1
+      }
     })
 
     const dadosHorario = Object.entries(porHorario).map(([periodo, quantidade]) => ({
@@ -145,12 +284,17 @@ function Dashboard() {
       quantidade
     }))
 
-    // Dados de produtividade por hora
+    // Dados de produtividade por hora (apenas tarefas computadas)
     const produtividade = Array.from({ length: 12 }, (_, i) => {
       const hora = i + 8 // 8h às 19h
       const tarefasHora = dadosFiltrados.filter(item => {
+        const tarefa = buscarTarefa(item)
         const horaItem = parseInt(item.horario.split(':')[0])
-        return horaItem === hora
+        const deveComputar = tarefa && (
+          tarefa.hasOwnProperty('computar_horas') ? tarefa.computar_horas !== false :
+          tarefa.categoria !== 'indisponibilidade'
+        )
+        return horaItem === hora && deveComputar
       }).length
 
       return {
@@ -200,10 +344,15 @@ function Dashboard() {
 
       <CardContent className="relative z-10 pt-0">
         <div className="text-5xl font-black text-white mb-2 tracking-tight drop-shadow-lg">
-          <AnimatedNumber
-            value={typeof value === 'string' ? value.replace(/\D/g, '') : value}
-            suffix={typeof value === 'string' && value.includes('h') ? 'h' : typeof value === 'string' && value.includes('m') ? 'm' : ''}
-          />
+          {typeof value === 'string' && value.includes('h') ? (
+            // Para valores de tempo, mostrar diretamente sem animação
+            <span>{value}</span>
+          ) : (
+            <AnimatedNumber
+              value={typeof value === 'string' ? value.replace(/\D/g, '') : value}
+              suffix=""
+            />
+          )}
         </div>
         <p className="text-sm text-white/85 font-semibold leading-relaxed">
           {subtitle}
@@ -312,7 +461,7 @@ function Dashboard() {
                     </span>
                   </div>
                   <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-400/30 px-3 py-1 rounded-full font-semibold">
-                    {Math.floor(estatisticas.tempoTotal / 60)}h {estatisticas.tempoTotal % 60}m
+                    {formatarTempo(estatisticas.tempoTotal)}
                   </Badge>
                 </div>
               </div>
@@ -376,7 +525,7 @@ function Dashboard() {
         />
         <StatCard
           title="Tempo Total"
-          value={`${Math.floor(estatisticas.tempoTotal / 60)}h ${estatisticas.tempoTotal % 60}m`}
+          value={formatarTempo(estatisticas.tempoTotal)}
           subtitle="tempo estimado"
           icon={Timer}
           gradient="bg-gradient-to-br from-amber-500 via-orange-600 to-red-600 shadow-amber-500/25"

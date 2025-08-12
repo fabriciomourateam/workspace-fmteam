@@ -27,6 +27,12 @@ function Relatorios() {
   const hasError = errorFuncionarios || errorTarefas || errorAgenda
   const error = errorFuncionarios || errorTarefas || errorAgenda
 
+  // Filtrar apenas tarefas que devem ser computadas
+  const tarefasComputadas = agenda?.filter(item => {
+    const tarefa = tarefas?.find(t => t.id === (item.tarefa || item.tarefa_id));
+    return tarefa?.computar_horas !== false;
+  }) || []
+
   // Função para recarregar todos os dados
   const refetchAll = () => {
     refetchFuncionarios()
@@ -154,7 +160,16 @@ function Relatorios() {
       tarefas: agenda?.length || 0,
       tempoTotal: agenda?.reduce((total, item) => {
         const tarefa = tarefas?.find(t => t.id === (item.tarefa || item.tarefa_id))
-        return total + (tarefa?.tempo_estimado || 30)
+        // Verificar se deve computar
+        const deveComputar = tarefa && (
+          tarefa.hasOwnProperty('computar_horas') ? tarefa.computar_horas !== false :
+          tarefa.categoria !== 'indisponibilidade'
+        )
+        
+        if (deveComputar) {
+          return total + (tarefa?.tempo_estimado || 30)
+        }
+        return total
       }, 0) || 0,
       produtividadePorFuncionario: produtividadePorFuncionario,
       analisePorCategoria: analisePorCategoria,
@@ -190,7 +205,18 @@ function Relatorios() {
       const tarefasFuncionario = agenda.filter(item => 
         (item.funcionario || item.funcionario_id) === funcionario.id
       )
-      const tempoTotal = tarefasFuncionario.reduce((total, item) => {
+      
+      // Separar tarefas que computam horas das que não computam
+      const tarefasComputadas = tarefasFuncionario.filter(item => {
+        const tarefaId = item.tarefa || item.tarefa_id
+        const tarefa = tarefas.find(t => t.id === tarefaId)
+        return tarefa && (
+          tarefa.hasOwnProperty('computar_horas') ? tarefa.computar_horas !== false :
+          tarefa.categoria !== 'indisponibilidade'
+        )
+      })
+      
+      const tempoTotal = tarefasComputadas.reduce((total, item) => {
         const tarefaId = item.tarefa || item.tarefa_id
         const tarefa = tarefas.find(t => t.id === tarefaId)
         return total + (tarefa?.tempo_estimado || 30)
@@ -198,9 +224,10 @@ function Relatorios() {
       
       resultado[funcionario.id] = {
         nome: funcionario.nome,
-        totalTarefas: tarefasFuncionario.length,
+        totalTarefas: tarefasComputadas.length,
+        totalTarefasGeral: tarefasFuncionario.length,
         tempoTotal: tempoTotal,
-        eficiencia: tarefasFuncionario.length > 0 ? (tempoTotal / tarefasFuncionario.length).toFixed(1) : 0,
+        eficiencia: tarefasComputadas.length > 0 ? (tempoTotal / tarefasComputadas.length).toFixed(1) : 0,
         categorias: {}
       }
       
@@ -311,7 +338,16 @@ function Relatorios() {
               {Math.round((agenda?.reduce((total, item) => {
                 const tarefaId = item.tarefa || item.tarefa_id
                 const tarefa = tarefas?.find(t => t.id === tarefaId)
-                return total + (tarefa?.tempo_estimado || 30)
+                // Verificar se deve computar
+                const deveComputar = tarefa && (
+                  tarefa.hasOwnProperty('computar_horas') ? tarefa.computar_horas !== false :
+                  tarefa.categoria !== 'indisponibilidade'
+                )
+                
+                if (deveComputar) {
+                  return total + (tarefa?.tempo_estimado || 30)
+                }
+                return total
               }, 0) || 0) / 60)}h
             </div>
             <p className="text-xs text-muted-foreground">
@@ -549,7 +585,7 @@ function Relatorios() {
                   <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
                     <Target className="w-5 h-5 text-white/90" />
                     <span className="text-white font-semibold">
-                      {agenda?.length || 0} tarefa{agenda?.length !== 1 ? 's' : ''} analisada{agenda?.length !== 1 ? 's' : ''}
+                      {tarefasComputadas.length} tarefa{tarefasComputadas.length !== 1 ? 's' : ''} analisada{tarefasComputadas.length !== 1 ? 's' : ''}
                     </span>
                   </div>
                   <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-400/30 px-3 py-1 rounded-full font-semibold">

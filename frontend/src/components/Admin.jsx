@@ -381,7 +381,8 @@ function Admin() {
           categoria: itemEditando.categoria,
           tempoEstimado: itemEditando.tempo_estimado || itemEditando.tempoEstimado,
           descricao: itemEditando.descricao,
-          prioridade: itemEditando.prioridade
+          prioridade: itemEditando.prioridade,
+          computarHoras: itemEditando.computar_horas !== false
         })
       } else {
         setFormData({
@@ -390,7 +391,8 @@ function Admin() {
           categoria: '',
           tempoEstimado: 30,
           descricao: '',
-          prioridade: 'media'
+          prioridade: 'media',
+          computarHoras: true
         })
       }
     }, [itemEditando])
@@ -403,7 +405,8 @@ function Admin() {
           categoria: formData.categoria,
           tempo_estimado: formData.tempoEstimado,
           descricao: formData.descricao,
-          prioridade: formData.prioridade
+          prioridade: formData.prioridade,
+          computar_horas: formData.computarHoras
         }
 
         if (itemEditando) {
@@ -450,7 +453,7 @@ function Admin() {
       }
     }
 
-    const categorias = ['gestao', 'atendimento', 'marketing', 'engajamento', 'conteudo', 'produto', 'interno']
+    const categorias = ['gestao', 'atendimento', 'marketing', 'engajamento', 'conteudo', 'produto', 'interno', 'indisponibilidade']
     const prioridades = ['baixa', 'media', 'alta']
 
     return (
@@ -633,6 +636,21 @@ function Admin() {
                   placeholder="Descrição da tarefa"
                   rows={3}
                 />
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  id="tarefa-computar-horas"
+                  type="checkbox"
+                  checked={formData.computarHoras}
+                  onChange={(e) => setFormData({...formData, computarHoras: e.target.checked})}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="tarefa-computar-horas" className="text-sm">
+                  Computar nas horas de trabalho
+                  <span className="text-xs text-gray-500 block">
+                    Desmarque para horários de pausa, almoço ou indisponibilidade
+                  </span>
+                </Label>
               </div>
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={fecharModal}>

@@ -94,7 +94,7 @@ export default function AgendamentoForm({
     
     // Debug apenas em desenvolvimento
     if (process.env.NODE_ENV === 'development') {
-      console.log('Gerando datas recorrentes:', { dataInicio, dataFim, frequencia })
+      console.log('Gerando datas recorrentes:', { dataInicio, dataFim, diasSemana })
     }
     console.log('Dias selecionados:', diasSemana)
     
@@ -375,6 +375,12 @@ export default function AgendamentoForm({
                 <SelectItem value="120">2 horas</SelectItem>
                 <SelectItem value="150">2h 30min</SelectItem>
                 <SelectItem value="180">3 horas</SelectItem>
+                <SelectItem value="210">3h 30min</SelectItem>
+                <SelectItem value="240">4 horas</SelectItem>
+                <SelectItem value="270">4h 30min</SelectItem>
+                <SelectItem value="300">5 horas</SelectItem>
+                <SelectItem value="330">5h 30min</SelectItem>
+                <SelectItem value="360">6 horas</SelectItem>
               </SelectContent>
             </Select>
           </div>

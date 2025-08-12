@@ -22,7 +22,7 @@ import Relatorios from './components/Relatorios'
 import Admin from './components/Admin'
 import CalendarioAgendamentos from './components/CalendarioAgendamentos'
 // import useKeyboardShortcuts from './hooks/useKeyboardShortcuts'
-import { useFuncionarios, useAgenda } from './hooks/useApi'
+import { useFuncionarios, useAgenda, useTarefas } from './hooks/useApi'
 import { ApiStatus } from './components/ApiStatus'
 import './App.css'
 import './styles/animations.css'
@@ -38,6 +38,13 @@ function Navigation() {
   // Carrega dados da API para os badges
   const { data: funcionarios } = useFuncionarios()
   const { data: agenda } = useAgenda()
+  const { data: tarefas } = useTarefas()
+
+  // Filtrar apenas tarefas que devem ser computadas
+  const tarefasComputadas = agenda?.filter(item => {
+    const tarefa = tarefas?.find(t => t.id === (item.tarefa || item.tarefa_id));
+    return tarefa?.computar_horas !== false;
+  }) || []
 
   // Itens principais (sempre visíveis)
   const mainNavItems = [
@@ -195,7 +202,7 @@ function Navigation() {
                 {funcionarios?.length || 0} Funcionários
               </Badge>
               <Badge variant="outline" className="text-blue-600 border-blue-600 bg-blue-50 text-xs px-2 py-1">
-                {agenda?.length || 0} Tarefas
+                {tarefasComputadas.length} Tarefas
               </Badge>
             </div>
 
@@ -304,7 +311,7 @@ function Navigation() {
                 {funcionarios?.length || 0} Funcionários
               </Badge>
               <Badge variant="outline" className="text-blue-600 border-blue-600 bg-blue-50">
-                {agenda?.length || 0} Tarefas
+                {tarefasComputadas.length} Tarefas
               </Badge>
             </div>
           </div>

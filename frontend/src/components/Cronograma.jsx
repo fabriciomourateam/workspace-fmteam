@@ -19,7 +19,8 @@ const categoriasCores = {
   'engajamento': 'bg-red-500',
   'conteudo': 'bg-purple-500',
   'produto': 'bg-cyan-500',
-  'interno': 'bg-pink-500'
+  'interno': 'bg-pink-500',
+  'indisponibilidade': 'bg-gray-400'
 }
 
 function Cronograma() {
@@ -450,9 +451,15 @@ function Cronograma() {
           <div className={`font-medium leading-tight break-words ${isCompleted ? 'line-through' : ''}`}>
             {tarefa.tarefaInfo?.nome || tarefa.tarefa}
             {isLongTask && <span className="ml-1 text-xs opacity-75">({duracao}min)</span>}
+            {tarefa.tarefaInfo?.computar_horas === false && (
+              <span className="ml-1 text-xs opacity-60" title="Não computado nas horas de trabalho">⏸️</span>
+            )}
           </div>
           <div className="text-xs opacity-75 leading-tight">
             {isLongTask ? `${tarefa.horario} - ${tarefa.horarios_ocupados?.[tarefa.horarios_ocupados.length - 1] || tarefa.horario}` : `${duracao}min`}
+            {tarefa.tarefaInfo?.computar_horas === false && (
+              <span className="ml-1 opacity-60">(não computado)</span>
+            )}
           </div>
         </div>
         
@@ -493,7 +500,7 @@ function Cronograma() {
                 </Badge>
               </div>
               <Badge variant="secondary">
-                {Object.values(funcionario.tarefas).filter(t => t !== null).length} tarefas
+                {Object.values(funcionario.tarefas).filter(t => t !== null && t.tarefaInfo?.computar_horas !== false).length} tarefas
               </Badge>
             </div>
           </CardHeader>

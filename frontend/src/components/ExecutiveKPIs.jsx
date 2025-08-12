@@ -37,8 +37,11 @@ const ExecutiveKPIs = () => {
       }
     });
 
-    // KPIs principais
-    const totalTarefas = agenda.length;
+    // KPIs principais - apenas tarefas computadas
+    const totalTarefas = agenda.filter(item => {
+      const tarefa = tarefas.find(t => t.id === item.tarefa);
+      return tarefa?.computar_horas !== false;
+    }).length;
     const tempoTotalEstimado = agenda.reduce((total, item) => {
       const tarefa = tarefas.find(t => t.id === item.tarefa);
       return total + (tarefa ? tarefa.tempoEstimado : 0);

@@ -19,17 +19,20 @@ const STATIC_DATA = {
     {"id": "teste_funcionario", "nome": "Funcionário de Teste", "horario_inicio": "", "horario_fim": "16:00", "cor": "#2563eb"}
   ],
   tarefas: [
-    {"id": "checkins", "nome": "Check-ins", "categoria": "gestao", "tempo_estimado": 30, "descricao": "Acompanhamento individual dos alunos", "prioridade": "alta"},
-    {"id": "reuniao_diaria", "nome": "Reunião diária", "categoria": "gestao", "tempo_estimado": 30, "descricao": "Alinhamento da equipe e planejamento do dia", "prioridade": "alta"},
-    {"id": "suporte", "nome": "Suporte", "categoria": "atendimento", "tempo_estimado": 30, "descricao": "Atendimento aos clientes e resolução de dúvidas", "prioridade": "alta"},
-    {"id": "social_selling", "nome": "Social Selling Insta", "categoria": "marketing", "tempo_estimado": 30, "descricao": "Atividades de marketing no Instagram", "prioridade": "media"},
-    {"id": "engajamento_grupo", "nome": "Enviar mensagens de engajamento no grupo", "categoria": "engajamento", "tempo_estimado": 30, "descricao": "Comunicação ativa com grupos de alunos", "prioridade": "alta"},
-    {"id": "separar_alunos", "nome": "Separar alunos para engajamento", "categoria": "engajamento", "tempo_estimado": 30, "descricao": "Segmentação de alunos para ações específicas", "prioridade": "media"},
-    {"id": "material_renovacao", "nome": "Elaborar material para alunos de renovação", "categoria": "conteudo", "tempo_estimado": 30, "descricao": "Criação de conteúdo para retenção de clientes", "prioridade": "alta"},
-    {"id": "montar_planos", "nome": "Montar planos novos", "categoria": "produto", "tempo_estimado": 30, "descricao": "Desenvolvimento de novos produtos e serviços", "prioridade": "media"},
-    {"id": "engajamento_alunos", "nome": "Engajamento dos alunos", "categoria": "engajamento", "tempo_estimado": 30, "descricao": "Ativação e motivação dos alunos", "prioridade": "alta"},
-    {"id": "conteudo_desengajados", "nome": "Produção de conteúdo para alunos desengajados", "categoria": "conteudo", "tempo_estimado": 30, "descricao": "Material específico para reativação de alunos", "prioridade": "media"},
-    {"id": "engajamento_time", "nome": "Engajamento no grupo do Time", "categoria": "interno", "tempo_estimado": 30, "descricao": "Comunicação e motivação da equipe interna", "prioridade": "baixa"}
+    {"id": "checkins", "nome": "Check-ins", "categoria": "gestao", "tempo_estimado": 30, "descricao": "Acompanhamento individual dos alunos", "prioridade": "alta", "computar_horas": true},
+    {"id": "reuniao_diaria", "nome": "Reunião diária", "categoria": "gestao", "tempo_estimado": 30, "descricao": "Alinhamento da equipe e planejamento do dia", "prioridade": "alta", "computar_horas": true},
+    {"id": "suporte", "nome": "Suporte", "categoria": "atendimento", "tempo_estimado": 30, "descricao": "Atendimento aos clientes e resolução de dúvidas", "prioridade": "alta", "computar_horas": true},
+    {"id": "social_selling", "nome": "Social Selling Insta", "categoria": "marketing", "tempo_estimado": 30, "descricao": "Atividades de marketing no Instagram", "prioridade": "media", "computar_horas": true},
+    {"id": "engajamento_grupo", "nome": "Enviar mensagens de engajamento no grupo", "categoria": "engajamento", "tempo_estimado": 30, "descricao": "Comunicação ativa com grupos de alunos", "prioridade": "alta", "computar_horas": true},
+    {"id": "separar_alunos", "nome": "Separar alunos para engajamento", "categoria": "engajamento", "tempo_estimado": 30, "descricao": "Segmentação de alunos para ações específicas", "prioridade": "media", "computar_horas": true},
+    {"id": "material_renovacao", "nome": "Elaborar material para alunos de renovação", "categoria": "conteudo", "tempo_estimado": 30, "descricao": "Criação de conteúdo para retenção de clientes", "prioridade": "alta", "computar_horas": true},
+    {"id": "montar_planos", "nome": "Montar planos novos", "categoria": "produto", "tempo_estimado": 30, "descricao": "Desenvolvimento de novos produtos e serviços", "prioridade": "media", "computar_horas": true},
+    {"id": "engajamento_alunos", "nome": "Engajamento dos alunos", "categoria": "engajamento", "tempo_estimado": 30, "descricao": "Ativação e motivação dos alunos", "prioridade": "alta", "computar_horas": true},
+    {"id": "conteudo_desengajados", "nome": "Produção de conteúdo para alunos desengajados", "categoria": "conteudo", "tempo_estimado": 30, "descricao": "Material específico para reativação de alunos", "prioridade": "media", "computar_horas": true},
+    {"id": "engajamento_time", "nome": "Engajamento no grupo do Time", "categoria": "interno", "tempo_estimado": 30, "descricao": "Comunicação e motivação da equipe interna", "prioridade": "baixa", "computar_horas": true},
+    {"id": "indisponivel", "nome": "Indisponível", "categoria": "indisponibilidade", "tempo_estimado": 30, "descricao": "Horário em que o funcionário não está disponível para trabalho", "prioridade": "baixa", "computar_horas": false},
+    {"id": "almoco", "nome": "Almoço", "categoria": "indisponibilidade", "tempo_estimado": 60, "descricao": "Horário de almoço", "prioridade": "baixa", "computar_horas": false},
+    {"id": "pausa", "nome": "Pausa/Intervalo", "categoria": "indisponibilidade", "tempo_estimado": 30, "descricao": "Pausa ou intervalo durante o expediente", "prioridade": "baixa", "computar_horas": false}
   ],
   agenda: [
     {"horario": "08:00", "funcionario": "jean", "tarefa": "suporte"},
@@ -72,18 +75,18 @@ class DataService {
 
   // Funcionários
   async getFuncionarios() {
-    if (this.isSupabaseEnabled) {
-      try {
-        const data = await supabaseService.getFuncionarios();
-        console.log('Funcionários carregados do Supabase:', data.length);
-        return data;
-      } catch (error) {
-        console.error('Erro no Supabase, usando fallback:', error);
-      }
+    if (!this.isSupabaseEnabled) {
+      throw new Error('Supabase não está configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY');
     }
-    
-    console.log('Usando dados estáticos para funcionários');
-    return STATIC_DATA.funcionarios;
+
+    try {
+      const data = await supabaseService.getFuncionarios();
+      console.log('✅ Funcionários carregados do Supabase:', data?.length || 0);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Erro ao carregar funcionários do Supabase:', error);
+      throw new Error(`Erro ao carregar funcionários: ${error.message}`);
+    }
   }
 
   async createFuncionario(funcionario) {
@@ -109,18 +112,23 @@ class DataService {
 
   // Tarefas
   async getTarefas() {
-    if (this.isSupabaseEnabled) {
-      try {
-        const data = await supabaseService.getTarefas();
-        console.log('Tarefas carregadas do Supabase:', data.length);
-        return data;
-      } catch (error) {
-        console.error('Erro no Supabase, usando fallback:', error);
-      }
+    if (!this.isSupabaseEnabled) {
+      throw new Error('Supabase não está configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY');
     }
-    
-    console.log('Usando dados estáticos para tarefas');
-    return STATIC_DATA.tarefas;
+
+    try {
+      const data = await supabaseService.getTarefas();
+      console.log('✅ Tarefas carregadas do Supabase:', data?.length || 0);
+      
+      // Debug específico para tarefas de indisponibilidade
+      const indisponiveis = data?.filter(t => t.categoria === 'indisponibilidade') || [];
+      console.log('🔍 Tarefas de indisponibilidade encontradas:', indisponiveis.length);
+      
+      return data || [];
+    } catch (error) {
+      console.error('❌ Erro ao carregar tarefas do Supabase:', error);
+      throw new Error(`Erro ao carregar tarefas: ${error.message}`);
+    }
   }
 
   async createTarefa(tarefa) {
@@ -146,35 +154,46 @@ class DataService {
 
   // Agenda
   async getAgenda() {
-    if (this.isSupabaseEnabled) {
-      try {
-        // Buscar apenas dados do Supabase (sem duplicação)
-        const data = await supabaseService.getAgenda();
-        // Transformar dados do Supabase para formato esperado
-        const transformedData = data.map(item => ({
-          id: item.id,
-          horario: item.horario,
-          funcionario: item.funcionario_id,
-          tarefa: item.tarefa_id,
-          data: item.data,
-          status: item.status || 'nao_iniciada',
-          tempo_real: item.tempo_real || 0,
-          tempo_inicio: item.tempo_inicio,
-          tempo_fim: item.tempo_fim,
-          funcionario_nome: item.funcionario?.nome,
-          tarefa_nome: item.tarefa?.nome,
-          // Novas colunas para agendamentos longos
-          duracao: item.duracao || 30,
-          horarios_ocupados: item.horarios_ocupados || [item.horario]
-        }));
-        
-        return transformedData;
-      } catch (error) {
-        console.error('Erro no Supabase, usando fallback:', error);
-      }
+    if (!this.isSupabaseEnabled) {
+      throw new Error('Supabase não está configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY');
     }
-    
-    return STATIC_DATA.agenda;
+
+    try {
+      // Buscar apenas dados do Supabase (sem duplicação)
+      const data = await supabaseService.getAgenda();
+      console.log('✅ Agenda carregada do Supabase:', data?.length || 0);
+      
+      if (!data || data.length === 0) {
+        console.log('ℹ️ Nenhum agendamento encontrado no Supabase');
+        return [];
+      }
+      
+      // Transformar dados do Supabase para formato esperado
+      const transformedData = data.map(item => ({
+        id: item.id,
+        horario: item.horario,
+        funcionario: item.funcionario_id,
+        tarefa: item.tarefa_id,
+        data: item.data,
+        status: item.status || 'nao_iniciada',
+        tempo_real: item.tempo_real || 0,
+        tempo_inicio: item.tempo_inicio,
+        tempo_fim: item.tempo_fim,
+        funcionario_nome: item.funcionario?.nome,
+        tarefa_nome: item.tarefa?.nome,
+        // Novas colunas para agendamentos longos
+        duracao: item.duracao || 30,
+        horarios_ocupados: item.horarios_ocupados || [item.horario],
+        // Manter referências aos objetos originais para compatibilidade
+        funcionarioInfo: item.funcionario,
+        tarefaInfo: item.tarefa
+      }));
+      
+      return transformedData;
+    } catch (error) {
+      console.error('❌ Erro ao carregar agenda do Supabase:', error);
+      throw new Error(`Erro ao carregar agenda: ${error.message}`);
+    }
   }
 
   async createAgendamento(agendamento) {

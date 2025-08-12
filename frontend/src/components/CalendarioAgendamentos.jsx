@@ -574,7 +574,7 @@ export default function CalendarioAgendamentos() {
                         />
                         <CardTitle className="text-lg">{funcionarioData.funcionario?.nome}</CardTitle>
                         <Badge variant="outline">
-                          {funcionarioData.tarefas.length} tarefa(s)
+                          {funcionarioData.tarefas.filter(t => t.tarefaInfo?.computar_horas !== false).length} tarefa(s)
                         </Badge>
                       </div>
                     </CardHeader>
