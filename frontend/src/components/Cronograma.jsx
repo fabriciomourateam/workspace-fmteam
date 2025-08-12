@@ -607,14 +607,8 @@ function Cronograma() {
                 {Object.values(cronogramaPorFuncionario).map(funcionario => (
                   <th 
                     key={funcionario.id} 
-                    className={`border border-gray-200 p-1 bg-gray-50 text-center font-medium text-xs relative overflow-visible ${
-                      resizingColumn === funcionario.id ? 'bg-blue-50' : ''
-                    }`}
-                    style={{ 
-                      width: `${getColumnWidth(funcionario.id)}px`, 
-                      minWidth: '60px',
-                      maxWidth: `${getColumnWidth(funcionario.id)}px`
-                    }}
+                    className="border border-gray-200 p-1 bg-gray-50 text-center font-medium text-xs relative"
+                    style={{ width: `${getColumnWidth(funcionario.id)}px`, minWidth: '60px' }}
                   >
                     <div className="flex flex-col items-center justify-center space-y-1">
                       <div 
@@ -626,17 +620,13 @@ function Cronograma() {
                     
                     {/* Handle de redimensionamento */}
                     <div
-                      className={`absolute top-0 right-0 w-3 h-full cursor-col-resize transition-all duration-200 z-20 ${
+                      className={`absolute top-0 right-0 w-1 h-full cursor-col-resize ${
                         resizingColumn === funcionario.id 
-                          ? 'bg-blue-500 shadow-lg' 
-                          : 'bg-gray-300 hover:bg-blue-400 opacity-50 hover:opacity-100'
+                          ? 'bg-blue-500' 
+                          : 'hover:bg-gray-400'
                       }`}
                       onMouseDown={(e) => handleMouseDown(e, funcionario.id)}
                       title="Arrastar para redimensionar coluna"
-                      style={{ 
-                        right: '-1px',
-                        borderRadius: '0 2px 2px 0'
-                      }}
                     />
                   </th>
                 ))}
