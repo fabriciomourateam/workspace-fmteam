@@ -89,11 +89,8 @@ function Dashboard() {
       })
     }
 
-    // Limitar para debug (remover depois)
-    if (agendaFiltrada.length > 100) {
-      console.warn('⚠️ Muitos agendamentos! Limitando para debug:', agendaFiltrada.length)
-      agendaFiltrada = agendaFiltrada.slice(0, 100)
-    }
+    // Debug removido - permitir todos os agendamentos
+    console.log('📊 Total de agendamentos processados:', agendaFiltrada.length)
 
     return agendaFiltrada
   }, [agenda, filtroFuncionario, filtroHorario])
@@ -102,7 +99,7 @@ function Dashboard() {
   const buscarTarefa = (item) => {
     // Agora item.tarefa é o ID da tarefa (string)
     const tarefaId = item.tarefa || item.tarefa_id
-    return tarefas.find(t => t.id === tarefaId)
+    return tarefas?.find(t => t.id === tarefaId) || null
   }
 
   // Helper para formatar tempo de forma consistente
@@ -121,8 +118,8 @@ function Dashboard() {
     // Debug geral
     console.log('📊 Dashboard Debug:', {
       dadosFiltrados: dadosFiltrados.length,
-      tarefas: tarefas.length,
-      tarefasIndisponiveis: tarefas.filter(t => t.categoria === 'indisponibilidade').length
+      tarefas: tarefas?.length || 0,
+      tarefasIndisponiveis: tarefas?.filter(t => t.categoria === 'indisponibilidade').length || 0
     })
     
     // Separar tarefas computadas das não computadas (versão simplificada)
@@ -243,7 +240,7 @@ function Dashboard() {
       )
       
       if (deveComputar) {
-        const funcionario = funcionarios.find(f => f.id === item.funcionario)
+        const funcionario = funcionarios?.find(f => f.id === item.funcionario)
         const nomeFuncionario = funcionario ? funcionario.nome : item.funcionario
         porFuncionario[nomeFuncionario] = (porFuncionario[nomeFuncionario] || 0) + 1
       }
@@ -313,16 +310,16 @@ function Dashboard() {
   }, [dadosFiltrados, estatisticas, funcionarios])
 
   const StatCard = ({ title, value, subtitle, icon: Icon, gradient, trend, delay = 0, change = null }) => (
-    <Card className={`group relative overflow-hidden transition-all duration-700 hover:scale-[1.03] hover:shadow-2xl hover:-translate-y-1 border-0 ${gradient} backdrop-blur-sm animate-pulse`}
+    <Card className={`group relative overflow-hidden transition-all duration-700 hover:scale-[1.03] hover:shadow-2xl hover:-translate-y-1 border-0 ${gradient} backdrop-blur-sm`}
       style={{ animationDelay: `${delay}ms` }}>
       {/* Efeito de brilho animado melhorado */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1500 ease-out"></div>
 
       {/* Padrão de fundo decorativo aprimorado */}
       <div className="absolute inset-0 opacity-[0.08]">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full -translate-y-20 translate-x-20 animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 w-28 h-28 bg-white rounded-full translate-y-14 -translate-x-14 animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white rounded-full -translate-x-8 -translate-y-8 animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full -translate-y-20 translate-x-20"></div>
+        <div className="absolute bottom-0 left-0 w-28 h-28 bg-white rounded-full translate-y-14 -translate-x-14"></div>
+        <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white rounded-full -translate-x-8 -translate-y-8"></div>
       </div>
 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 relative z-10">
@@ -413,9 +410,9 @@ function Dashboard() {
     <div className="space-y-10 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-100/60 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/30 -m-6 p-6 relative overflow-hidden" style={{ backgroundColor: '#f8fafc' }}>
       {/* Elementos decorativos de fundo */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-indigo-600/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/10 to-pink-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-60 h-60 bg-gradient-to-br from-emerald-400/5 to-teal-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-indigo-600/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/10 to-pink-600/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 w-60 h-60 bg-gradient-to-br from-emerald-400/5 to-teal-600/5 rounded-full blur-3xl"></div>
       </div>
 
 
@@ -423,9 +420,9 @@ function Dashboard() {
       <Card className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 border-0 shadow-2xl rounded-3xl">
         {/* Padrão de fundo decorativo */}
         <div className="absolute inset-0 opacity-[0.08]">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-white rounded-full -translate-y-40 translate-x-40 animate-pulse"></div>
-          <div className="absolute bottom-0 left-0 w-60 h-60 bg-white rounded-full translate-y-30 -translate-x-30 animate-pulse" style={{ animationDelay: '2s' }}></div>
-          <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-white rounded-full -translate-x-20 -translate-y-20 animate-pulse" style={{ animationDelay: '4s' }}></div>
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white rounded-full -translate-y-40 translate-x-40"></div>
+          <div className="absolute bottom-0 left-0 w-60 h-60 bg-white rounded-full translate-y-30 -translate-x-30"></div>
+          <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-white rounded-full -translate-x-20 -translate-y-20"></div>
         </div>
 
         <CardHeader className="relative z-10 p-8">
@@ -440,7 +437,7 @@ function Dashboard() {
                   <div>
                     <h2 className="text-3xl font-black text-white tracking-tight drop-shadow-lg flex items-center gap-3">
                       Dashboard
-                      <Sparkles className="w-6 h-6 animate-pulse" />
+                      <Sparkles className="w-6 h-6" />
                     </h2>
                     <p className="text-blue-100 text-lg font-medium mt-1">
                       Visão geral das atividades e performance da equipe

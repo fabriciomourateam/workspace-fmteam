@@ -354,11 +354,11 @@ function Cronograma() {
     if (!tarefa) {
       return (
         <div 
-          className="text-gray-400 text-xs text-center h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded border-2 border-dashed border-gray-300 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors group"
+          className="text-gray-300 text-xs text-center h-8 flex items-center justify-center bg-gray-50/30 dark:bg-gray-700/20 rounded border border-dashed border-gray-200/50 dark:border-gray-600/30 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/40 transition-colors group opacity-30 hover:opacity-60"
           onClick={() => handleAddAgendamento(horario, funcionarioId)}
           title="Clique para adicionar tarefa"
         >
-          <span className="text-gray-400 group-hover:text-gray-600">+</span>
+          <span className="text-gray-300 group-hover:text-gray-500 text-xs">+</span>
         </div>
       )
     }
@@ -457,17 +457,15 @@ function Cronograma() {
         <div className="ml-4 pr-6">
           <div className={`font-medium leading-tight break-words ${isCompleted ? 'line-through' : ''}`}>
             {tarefa.tarefaInfo?.nome || tarefa.tarefa}
-            {isLongTask && <span className="ml-1 text-xs opacity-75">({duracao}min)</span>}
             {tarefa.tarefaInfo?.computar_horas === false && (
               <span className="ml-1 text-xs opacity-60" title="Não computado nas horas de trabalho">⏸️</span>
             )}
           </div>
-          <div className="text-xs opacity-75 leading-tight">
-            {isLongTask ? `${tarefa.horario} - ${tarefa.horarios_ocupados?.[tarefa.horarios_ocupados.length - 1] || tarefa.horario}` : `${duracao}min`}
-            {tarefa.tarefaInfo?.computar_horas === false && (
-              <span className="ml-1 opacity-60">(não computado)</span>
-            )}
-          </div>
+          {tarefa.tarefaInfo?.computar_horas === false && (
+            <div className="text-xs opacity-60 leading-tight">
+              (não computado)
+            </div>
+          )}
         </div>
         
         {/* Botão de deletar - só no primeiro slot */}
