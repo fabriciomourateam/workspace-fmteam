@@ -25,7 +25,7 @@ const categoriasCores = {
 
 function Cronograma() {
   const [funcionarioSelecionado, setFuncionarioSelecionado] = useState('todos')
-  const [visualizacao, setVisualizacao] = useState('timeline')
+  const [visualizacao, setVisualizacao] = useState('vertical')
   const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0])
   
   // Estados para seleção múltipla
