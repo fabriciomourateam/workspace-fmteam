@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Clock, User, Users, Filter, Calendar, ChevronLeft, ChevronRight, Grid3X3, List, BarChart3, CheckCircle2, X } from 'lucide-react'
+import { Clock, User, Users, Filter, Calendar, ChevronLeft, ChevronRight, Grid3X3, List, BarChart3, CheckCircle2, X, Move } from 'lucide-react'
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
@@ -27,14 +27,24 @@ function Cronograma() {
   const [funcionarioSelecionado, setFuncionarioSelecionado] = useState('todos')
   const [visualizacao, setVisualizacao] = useState('vertical')
   const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0])
-  
+
   // Estados para seleção múltipla
   const [modoSelecaoMultipla, setModoSelecaoMultipla] = useState(false)
   const [tarefasSelecionadas, setTarefasSelecionadas] = useState(new Set())
-  
+
+  // Estados para drag and drop
+  const [draggedTask, setDraggedTask] = useState(null)
+  const [dragOverCell, setDragOverCell] = useState(null)
+  const [isDragging, setIsDragging] = useState(false)
+
+  // Estados para duplicação de tarefas
+  const [modalDuplicacao, setModalDuplicacao] = useState(false)
+  const [datasDuplicacao, setDatasDuplicacao] = useState([])
+  const [duplicandoTarefas, setDuplicandoTarefas] = useState(false)
+
   const showSuccess = (message) => alert('Sucesso: ' + message)
   const showError = (message) => alert('Erro: ' + message)
-  
+
   // Estado para larguras das colunas redimensionáveis
   const [columnWidths, setColumnWidths] = useState(() => {
     const saved = localStorage.getItem('cronograma-column-widths')
@@ -45,6 +55,17 @@ function Cronograma() {
 
   // Hook de personalização
   const { getClassesDensidade, getCoresTema } = usePersonalizacao()
+
+  // Limpar estilos quando não está mais arrastando
+  useEffect(() => {
+    if (!isDragging) {
+      // Remover atributo data-dragging de todos os elementos
+      const taskCards = document.querySelectorAll('.task-card[data-dragging="true"]')
+      taskCards.forEach(card => {
+        card.removeAttribute('data-dragging')
+      })
+    }
+  }, [isDragging])
 
   // Salvar larguras das colunas no localStorage
   useEffect(() => {
@@ -61,10 +82,10 @@ function Cronograma() {
     e.stopPropagation()
     setIsResizing(true)
     setResizingColumn(columnId)
-    
+
     const startX = e.clientX
     const startWidth = columnWidths[columnId] || 80
-    
+
     const handleMouseMove = (e) => {
       const newWidth = Math.max(60, startWidth + (e.clientX - startX))
       console.log('🖱️ Mouse move:', { columnId, newWidth, startX, currentX: e.clientX })
@@ -73,7 +94,7 @@ function Cronograma() {
         [columnId]: newWidth
       }))
     }
-    
+
     const handleMouseUp = () => {
       console.log('🖱️ Mouse up:', { columnId, finalWidth: columnWidths[columnId] })
       setIsResizing(false)
@@ -81,7 +102,7 @@ function Cronograma() {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
-    
+
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
   }
@@ -144,10 +165,10 @@ function Cronograma() {
 
   // Handlers para agendamentos
   const handleAddAgendamento = (horario, funcionarioId) => {
-    setNovoAgendamento({ 
-      horario, 
+    setNovoAgendamento({
+      horario,
       funcionario_id: funcionarioId,
-      data: dataSelecionada 
+      data: dataSelecionada
     })
     setEditingAgendamento(null)
     setAgendamentoFormOpen(true)
@@ -186,6 +207,91 @@ function Cronograma() {
         showError('Erro ao deletar agendamento: ' + error.message)
       }
     }
+  }
+
+  // Funções para duplicação de tarefas
+  const handleDuplicarTarefas = () => {
+    const tarefasDoDia = dadosFiltrados.filter(tarefa => tarefa.data === dataSelecionada)
+
+    if (tarefasDoDia.length === 0) {
+      showError('Não há tarefas para duplicar neste dia')
+      return
+    }
+
+    setModalDuplicacao(true)
+  }
+
+  const handleConfirmarDuplicacao = async () => {
+    if (datasDuplicacao.length === 0) {
+      showError('Selecione pelo menos uma data para duplicar')
+      return
+    }
+
+    setDuplicandoTarefas(true)
+
+    try {
+      const tarefasDoDia = dadosFiltrados.filter(tarefa => tarefa.data === dataSelecionada)
+      const promises = []
+
+      for (const novaData of datasDuplicacao) {
+        for (const tarefa of tarefasDoDia) {
+          // Verificar se já existe tarefa no mesmo horário e funcionário na data destino
+          const tarefaExistente = agenda?.find(a =>
+            a.data === novaData &&
+            a.horario === tarefa.horario &&
+            a.funcionario === tarefa.funcionario
+          )
+
+          if (!tarefaExistente) {
+            const novaTarefa = {
+              tarefa_id: tarefa.tarefa,
+              funcionario_id: tarefa.funcionario,
+              data: novaData,
+              horario: tarefa.horario,
+              status: 'nao_iniciada',
+              observacoes: tarefa.observacoes || null
+            }
+            promises.push(supabaseService.createAgendamento(novaTarefa))
+          }
+        }
+      }
+
+      await Promise.all(promises)
+
+      const totalDuplicadas = promises.length
+      showSuccess(`${totalDuplicadas} tarefa(s) duplicada(s) para ${datasDuplicacao.length} dia(s)!`)
+
+      setModalDuplicacao(false)
+      setDatasDuplicacao([])
+      refetchAgenda()
+    } catch (error) {
+      showError('Erro ao duplicar tarefas: ' + error.message)
+    } finally {
+      setDuplicandoTarefas(false)
+    }
+  }
+
+  const adicionarDataDuplicacao = (data) => {
+    if (!datasDuplicacao.includes(data) && data !== dataSelecionada) {
+      setDatasDuplicacao([...datasDuplicacao, data])
+    }
+  }
+
+  const removerDataDuplicacao = (data) => {
+    setDatasDuplicacao(datasDuplicacao.filter(d => d !== data))
+  }
+
+  const gerarProximosDias = (quantidade = 7) => {
+    const dias = []
+    const hoje = new Date(dataSelecionada)
+
+    for (let i = 1; i <= quantidade; i++) {
+      const proximoDia = new Date(hoje)
+      proximoDia.setDate(hoje.getDate() + i)
+      dias.push(proximoDia.toISOString().split('T')[0])
+    }
+
+    return dias
   }
 
   // Funções para seleção múltipla
@@ -234,26 +340,137 @@ function Cronograma() {
     setModoSelecaoMultipla(false)
   }
 
+  // Funções de drag and drop
+  const handleDragStart = (e, tarefa) => {
+    console.log('🎯 Iniciando drag:', tarefa)
+    setDraggedTask(tarefa)
+    setIsDragging(true)
+
+    // Configurar dados do drag
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      id: tarefa.id,
+      horario: tarefa.horario,
+      funcionario: tarefa.funcionario,
+      tarefa: tarefa.tarefa
+    }))
+
+    // Marcar elemento como sendo arrastado
+    e.target.setAttribute('data-dragging', 'true')
+  }
+
+  const handleDragEnd = (e) => {
+    console.log('🏁 Finalizando drag')
+
+    // Limpar estados
+    setDraggedTask(null)
+    setDragOverCell(null)
+    setIsDragging(false)
+
+    // Remover atributo de drag do elemento
+    e.target.removeAttribute('data-dragging')
+  }
+
+  const handleDragOver = (e, horario, funcionarioId) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+
+    const cellKey = `${funcionarioId}-${horario}`
+    if (dragOverCell !== cellKey) {
+      setDragOverCell(cellKey)
+    }
+  }
+
+  const handleDragLeave = (e) => {
+    // Só limpar se realmente saiu da célula
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverCell(null)
+    }
+  }
+
+  const handleDrop = async (e, novoHorario, novoFuncionarioId) => {
+    e.preventDefault()
+    setDragOverCell(null)
+
+    if (!draggedTask) return
+
+    console.log('📦 Drop realizado:', {
+      tarefa: draggedTask,
+      novoHorario,
+      novoFuncionarioId,
+      horarioOriginal: draggedTask.horario,
+      funcionarioOriginal: draggedTask.funcionario
+    })
+
+    // Verificar se houve mudança
+    if (draggedTask.horario === novoHorario && draggedTask.funcionario === novoFuncionarioId) {
+      console.log('ℹ️ Sem mudança, cancelando')
+      return
+    }
+
+    // Verificar se já existe tarefa no destino
+    const tarefaExistente = cronogramaPorFuncionario[novoFuncionarioId]?.tarefas[novoHorario]
+    if (tarefaExistente) {
+      const confirmar = window.confirm(
+        `Já existe uma tarefa "${tarefaExistente.tarefaInfo?.nome}" às ${novoHorario} para ${cronogramaPorFuncionario[novoFuncionarioId]?.nome}.\n\nDeseja substituir?`
+      )
+      if (!confirmar) return
+
+      // Deletar tarefa existente
+      try {
+        await supabaseService.deleteAgendamento(tarefaExistente.id)
+      } catch (error) {
+        showError('Erro ao remover tarefa existente: ' + error.message)
+        return
+      }
+    }
+
+    try {
+      // Atualizar o agendamento
+      await supabaseService.updateAgendamento(draggedTask.id, {
+        horario: novoHorario,
+        funcionario_id: novoFuncionarioId,
+        // Manter outros dados
+        tarefa_id: draggedTask.tarefa,
+        data: draggedTask.data || dataSelecionada,
+        status: draggedTask.status || 'nao_iniciada'
+      })
+
+      showSuccess(`Tarefa movida para ${cronogramaPorFuncionario[novoFuncionarioId]?.nome} às ${novoHorario}`)
+
+      // Adicionar animação de sucesso
+      const targetCell = document.querySelector(`[data-cell="${novoFuncionarioId}-${novoHorario}"]`)
+      if (targetCell) {
+        targetCell.classList.add('drop-success')
+        setTimeout(() => targetCell.classList.remove('drop-success'), 500)
+      }
+
+      refetchAgenda()
+    } catch (error) {
+      showError('Erro ao mover tarefa: ' + error.message)
+    }
+  }
+
   // Dados filtrados
   const dadosFiltrados = useMemo(() => {
     if (!agenda) return []
-    
+
     // Expor dados para debug
     window.__CRONOGRAMA_DEBUG_DATA__ = agenda
-    
+
     let filtrados = agenda
-    
+
     // Filtrar por data
     filtrados = filtrados.filter(item => {
       const itemData = item.data || new Date().toISOString().split('T')[0]
       return itemData === dataSelecionada
     })
-    
+
     // Filtrar por funcionário
     if (funcionarioSelecionado !== 'todos') {
       filtrados = filtrados.filter(item => item.funcionario === funcionarioSelecionado)
     }
-    
+
     return filtrados
   }, [agenda, funcionarioSelecionado, dataSelecionada])
 
@@ -265,7 +482,7 @@ function Cronograma() {
         const hora = h.toString().padStart(2, '0')
         const minuto = m.toString().padStart(2, '0')
         todosHorarios.push(`${hora}:${minuto}`)
-        
+
         if (h === 19 && m === 30) break
       }
     }
@@ -275,24 +492,24 @@ function Cronograma() {
   // Organizar dados por funcionário e horário
   const cronogramaPorFuncionario = useMemo(() => {
     if (!funcionarios || !tarefas) return {}
-    
+
     const resultado = {}
-    
-    const funcionariosFiltrados = funcionarioSelecionado === 'todos' 
-      ? funcionarios 
+
+    const funcionariosFiltrados = funcionarioSelecionado === 'todos'
+      ? funcionarios
       : funcionarios.filter(f => f.id === funcionarioSelecionado)
-    
+
     funcionariosFiltrados.forEach(funcionario => {
       resultado[funcionario.id] = {
         ...funcionario,
         tarefas: {}
       }
-      
+
       horarios.forEach(horario => {
         resultado[funcionario.id].tarefas[horario] = null
       })
     })
-    
+
     dadosFiltrados.forEach(item => {
       if (resultado[item.funcionario]) {
         const tarefa = tarefas.find(t => t.id === item.tarefa)
@@ -300,7 +517,7 @@ function Cronograma() {
           ...item,
           tarefaInfo: tarefa
         }
-        
+
         // Se tem horários ocupados (agendamento longo), marca todos os slots
         if (item.horarios_ocupados && item.horarios_ocupados.length > 1) {
           item.horarios_ocupados.forEach((horario, index) => {
@@ -321,7 +538,7 @@ function Cronograma() {
         }
       }
     })
-    
+
     return resultado
   }, [funcionarios, tarefas, dadosFiltrados, horarios, funcionarioSelecionado])
 
@@ -351,14 +568,24 @@ function Cronograma() {
   }
 
   const TarefaCard = ({ tarefa, horario, funcionarioId }) => {
+    const cellKey = `${funcionarioId}-${horario}`
+    const isDropTarget = dragOverCell === cellKey
+    const isValidDropTarget = draggedTask && (draggedTask.horario !== horario || draggedTask.funcionario !== funcionarioId)
+
     if (!tarefa) {
       return (
-        <div 
-          className="text-gray-300 text-xs text-center h-8 flex items-center justify-center bg-gray-50/30 dark:bg-gray-700/20 rounded border border-dashed border-gray-200/50 dark:border-gray-600/30 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/40 transition-colors group opacity-30 hover:opacity-60"
+        <div
+          className={`grid-cell text-gray-300 text-xs text-center h-8 flex items-center justify-center bg-gray-50/30 dark:bg-gray-700/20 rounded border border-dashed border-gray-200/50 dark:border-gray-600/30 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/40 transition-all group opacity-30 hover:opacity-60 ${isDropTarget && isValidDropTarget ? 'drop-zone-valid valid-drop-indicator' : ''
+            } ${isDragging ? 'no-select' : ''}`}
           onClick={() => handleAddAgendamento(horario, funcionarioId)}
-          title="Clique para adicionar tarefa"
+          onDragOver={(e) => handleDragOver(e, horario, funcionarioId)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, horario, funcionarioId)}
+          title="Clique para adicionar tarefa • Arraste tarefas aqui"
         >
-          <span className="text-gray-300 group-hover:text-gray-500 text-xs">+</span>
+          <span className={`text-gray-300 group-hover:text-gray-500 text-xs ${isDropTarget && isValidDropTarget ? 'text-blue-500' : ''}`}>
+            {isDropTarget && isValidDropTarget ? '📥' : '+'}
+          </span>
         </div>
       )
     }
@@ -366,7 +593,7 @@ function Cronograma() {
     const categoria = tarefa.tarefaInfo?.categoria || 'interno'
     const corCategoria = categoriasCores[categoria] || 'bg-gray-500'
     const isCompleted = tarefa.status === 'concluida'
-    
+
     // Verificar se é parte de um agendamento longo
     const isLongTask = tarefa.isPartOfLongerTask
     const isFirstSlot = tarefa.isFirstSlot
@@ -378,7 +605,7 @@ function Cronograma() {
 
     const toggleTarefa = async (e) => {
       e.stopPropagation()
-      
+
       // Se estiver no modo de seleção múltipla, apenas seleciona/deseleciona
       if (modoSelecaoMultipla) {
         toggleSelecaoTarefa(tarefa.id)
@@ -389,13 +616,13 @@ function Cronograma() {
       try {
         const novoStatus = isCompleted ? 'nao_iniciada' : 'concluida'
         const agora = new Date()
-        
+
         await supabaseService.updateAgendamento(tarefa.id, {
           status: novoStatus,
           tempo_fim: novoStatus === 'concluida' ? agora.toISOString() : null,
           tempo_real: novoStatus === 'concluida' ? (tarefa.tarefaInfo?.tempo_estimado || 30) : null
         })
-        
+
         refetchAgenda()
       } catch (error) {
         console.error('Erro ao atualizar tarefa:', error)
@@ -405,10 +632,9 @@ function Cronograma() {
     // Para agendamentos longos, só mostrar conteúdo no primeiro slot
     if (isLongTask && !isFirstSlot) {
       return (
-        <div 
-          className={`p-1 ${corCategoria} rounded text-white text-xs min-h-8 shadow-sm transition-all cursor-pointer relative ${
-            isCompleted ? 'opacity-75 ring-1 ring-green-400' : ''
-          } border-l-2 border-white/30`}
+        <div
+          className={`p-1 ${corCategoria} rounded text-white text-xs min-h-8 shadow-sm transition-all cursor-pointer relative ${isCompleted ? 'opacity-75 ring-1 ring-green-400' : ''
+            } border-l-2 border-white/30`}
           onClick={() => handleEditAgendamento(tarefa)}
           title={`Continuação: ${tarefa.tarefaInfo?.nome || tarefa.tarefa} (${duracao}min)`}
         >
@@ -420,10 +646,17 @@ function Cronograma() {
     }
 
     return (
-      <div 
-        className={`p-1 ${corCategoria} rounded text-white text-xs min-h-8 shadow-sm hover:shadow-md transition-all cursor-pointer group relative ${
-          isCompleted ? 'opacity-75 ring-1 ring-green-400' : ''
-        } ${isLongTask ? 'border-r-2 border-white/30' : ''}`}
+      <div
+        className={`task-card p-1 ${corCategoria} rounded text-white text-xs min-h-8 shadow-sm hover:shadow-md transition-all group relative ${isCompleted ? 'ring-1 ring-green-400' : ''
+          } ${isLongTask ? 'border-r-2 border-white/30' : ''
+          } ${isDropTarget && isValidDropTarget ? 'drop-zone-valid' : ''} ${isDragging ? 'no-select' : ''}`}
+        data-completed={isCompleted ? 'true' : 'false'}
+        draggable={!modoSelecaoMultipla}
+        onDragStart={(e) => handleDragStart(e, tarefa)}
+        onDragEnd={handleDragEnd}
+        onDragOver={(e) => handleDragOver(e, horario, funcionarioId)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, horario, funcionarioId)}
         onClick={() => handleEditAgendamento(tarefa)}
         onContextMenu={(e) => {
           e.preventDefault()
@@ -431,20 +664,19 @@ function Cronograma() {
             handleDeleteAgendamento(tarefa)
           }
         }}
-        title={`Clique para editar • Clique direito para excluir${isLongTask ? ` • Duração: ${duracao}min` : ''}`}
+        title={`Arraste para mover • Clique para editar • Clique direito para excluir${isLongTask ? ` • Duração: ${duracao}min` : ''}`}
       >
         {/* Checkbox - só no primeiro slot */}
         <button
-          className={`absolute top-0.5 left-0.5 w-3 h-3 rounded border flex items-center justify-center transition-all ${
-            modoSelecaoMultipla && tarefasSelecionadas.has(tarefa.id)
-              ? 'bg-blue-500 border-blue-500 text-white'
-              : isCompleted 
-              ? 'bg-green-500 border-green-500 text-white' 
+          className={`absolute top-0.5 left-0.5 w-3 h-3 rounded border flex items-center justify-center transition-all ${modoSelecaoMultipla && tarefasSelecionadas.has(tarefa.id)
+            ? 'bg-blue-500 border-blue-500 text-white'
+            : isCompleted
+              ? 'bg-green-500 border-green-500 text-white'
               : 'border-white/50 hover:border-white hover:bg-white/20'
-          }`}
+            }`}
           onClick={toggleTarefa}
           title={
-            modoSelecaoMultipla 
+            modoSelecaoMultipla
               ? (tarefasSelecionadas.has(tarefa.id) ? 'Desselecionar' : 'Selecionar')
               : (isCompleted ? 'Marcar como pendente' : 'Marcar como concluída')
           }
@@ -453,8 +685,15 @@ function Cronograma() {
           {!modoSelecaoMultipla && isCompleted && <span className="text-xs">✓</span>}
         </button>
 
+        {/* Ícone de drag - só no primeiro slot */}
+        {!modoSelecaoMultipla && (
+          <div className="drag-handle absolute top-0.5 right-5 opacity-0 group-hover:opacity-70 transition-opacity">
+            <Move className="w-3 h-3 text-white/80" />
+          </div>
+        )}
+
         {/* Conteúdo da tarefa */}
-        <div className="ml-4 pr-6">
+        <div className="ml-4 pr-8">
           <div className={`font-medium leading-tight break-words ${isCompleted ? 'line-through' : ''}`}>
             {tarefa.tarefaInfo?.nome || tarefa.tarefa}
             {tarefa.tarefaInfo?.computar_horas === false && (
@@ -467,7 +706,7 @@ function Cronograma() {
             </div>
           )}
         </div>
-        
+
         {/* Botão de deletar - só no primeiro slot */}
         <button
           className="absolute top-0.5 right-0.5 opacity-70 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs transition-all hover:scale-110"
@@ -492,14 +731,14 @@ function Cronograma() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div 
+                <div
                   className="w-4 h-4 rounded-full"
                   style={{ backgroundColor: funcionario.cor }}
                 />
                 <CardTitle className="text-lg">{funcionario.nome}</CardTitle>
                 <Badge variant="outline">
-                  {funcionario.horario_inicio === 'flexible' 
-                    ? 'Horário Flexível' 
+                  {funcionario.horario_inicio === 'flexible'
+                    ? 'Horário Flexível'
                     : `${funcionario.horario_inicio || 'N/A'} - ${funcionario.horario_fim || 'N/A'}`
                   }
                 </Badge>
@@ -516,10 +755,10 @@ function Cronograma() {
                   <div className="text-xs font-medium text-gray-600 text-center leading-tight">
                     {formatarHorarioIntervalo(horario)}
                   </div>
-                  <TarefaCard 
-                    tarefa={funcionario.tarefas[horario]} 
-                    horario={horario} 
-                    funcionarioId={funcionario.id} 
+                  <TarefaCard
+                    tarefa={funcionario.tarefas[horario]}
+                    horario={horario}
+                    funcionarioId={funcionario.id}
                   />
                 </div>
               ))}
@@ -560,7 +799,7 @@ function Cronograma() {
                 <tr key={funcionario.id}>
                   <td className="border border-gray-200 p-2 font-medium">
                     <div className="flex items-center space-x-2">
-                      <div 
+                      <div
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: funcionario.cor }}
                       />
@@ -569,10 +808,10 @@ function Cronograma() {
                   </td>
                   {horarios.map(horario => (
                     <td key={horario} className="border border-gray-200 p-1">
-                      <TarefaCard 
-                        tarefa={funcionario.tarefas[horario]} 
-                        horario={horario} 
-                        funcionarioId={funcionario.id} 
+                      <TarefaCard
+                        tarefa={funcionario.tarefas[horario]}
+                        horario={horario}
+                        funcionarioId={funcionario.id}
                       />
                     </td>
                   ))}
@@ -603,26 +842,25 @@ function Cronograma() {
                   Horário
                 </th>
                 {Object.values(cronogramaPorFuncionario).map(funcionario => (
-                  <th 
-                    key={funcionario.id} 
+                  <th
+                    key={funcionario.id}
                     className="border border-gray-200 p-1 bg-gray-50 text-center font-medium text-xs relative"
                     style={{ width: `${getColumnWidth(funcionario.id)}px`, minWidth: '60px' }}
                   >
                     <div className="flex flex-col items-center justify-center space-y-1">
-                      <div 
+                      <div
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: funcionario.cor }}
                       />
                       <span className="text-xs leading-tight">{funcionario.nome}</span>
                     </div>
-                    
+
                     {/* Handle de redimensionamento */}
                     <div
-                      className={`absolute top-0 right-0 w-1 h-full cursor-col-resize ${
-                        resizingColumn === funcionario.id 
-                          ? 'bg-blue-500' 
-                          : 'hover:bg-gray-400'
-                      }`}
+                      className={`absolute top-0 right-0 w-1 h-full cursor-col-resize ${resizingColumn === funcionario.id
+                        ? 'bg-blue-500'
+                        : 'hover:bg-gray-400'
+                        }`}
                       onMouseDown={(e) => handleMouseDown(e, funcionario.id)}
                       title="Arrastar para redimensionar coluna"
                     />
@@ -639,15 +877,17 @@ function Cronograma() {
                     </div>
                   </td>
                   {Object.values(cronogramaPorFuncionario).map(funcionario => (
-                    <td 
-                      key={funcionario.id} 
+                    <td
+                      key={funcionario.id}
                       className="border border-gray-200 p-1"
                       style={{ width: `${getColumnWidth(funcionario.id)}px` }}
+                      data-cell={`${funcionario.id}-${horario}`}
                     >
-                      <TarefaCard 
-                        tarefa={funcionario.tarefas[horario]} 
-                        horario={horario} 
-                        funcionarioId={funcionario.id} 
+                      <TarefaCard
+                        key={`task-${funcionario.id}-${horario}`}
+                        tarefa={funcionario.tarefas[horario]}
+                        horario={horario}
+                        funcionarioId={funcionario.id}
                       />
                     </td>
                   ))}
@@ -656,7 +896,7 @@ function Cronograma() {
             </tbody>
           </table>
         </div>
-        
+
         {/* Botão para resetar larguras das colunas */}
         {visualizacao === 'vertical' && Object.keys(columnWidths).length > 0 && (
           <Button
@@ -675,6 +915,16 @@ function Cronograma() {
 
   return (
     <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 dark:from-slate-900 dark:via-blue-900/10 dark:to-indigo-900/20 -m-6 p-6">
+      {/* Overlay durante drag */}
+      {isDragging && <div className="drag-overlay" />}
+
+      {/* Feedback visual durante drag */}
+      {isDragging && draggedTask && (
+        <div className="drag-feedback">
+          🎯 Movendo: {draggedTask.tarefaInfo?.nome || draggedTask.tarefa}
+        </div>
+      )}
+
       {/* Elementos decorativos de fundo */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/5 to-indigo-600/5 rounded-full blur-3xl animate-pulse"></div>
@@ -690,50 +940,32 @@ function Cronograma() {
           <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-white rounded-full -translate-x-20 -translate-y-20 animate-pulse" style={{ animationDelay: '4s' }}></div>
         </div>
 
-        <CardHeader className="relative z-10 p-8">
-          <div className="space-y-4">
-            {/* Linha 1: Título e informações */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              <div>
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-xl">
-                    <Calendar className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-black text-white tracking-tight drop-shadow-lg flex items-center gap-3">
-                      Cronograma
-                      <Clock className="w-6 h-6 animate-pulse" />
-                    </h2>
-                    <p className="text-blue-100 text-lg font-medium mt-1">
-                      Gerencie agendamentos e visualize a agenda da equipe
-                    </p>
-                  </div>
+        <CardHeader className="relative z-10 p-6">
+          <div className="space-y-3">
+            {/* Linha 1: Título, Data e Navegação */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md shadow-lg">
+                  <Calendar className="w-6 h-6 text-white" />
                 </div>
-                <div className="flex items-center gap-4 mt-4">
-                  <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 shadow-lg">
-                    <Calendar className="w-5 h-5 text-white/90" />
-                    <span className="text-white font-semibold">
-                      {new Date(dataSelecionada + 'T00:00:00').toLocaleDateString('pt-BR', { 
-                        weekday: 'long', 
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                  <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-400/30 px-3 py-1 rounded-full font-semibold">
-                    {dadosFiltrados.length} agendamento{dadosFiltrados.length !== 1 ? 's' : ''}
-                  </Badge>
+                <div>
+                  <h2 className="text-2xl font-bold text-white tracking-tight drop-shadow-lg flex items-center gap-2">
+                    Cronograma
+                    <Clock className="w-5 h-5 animate-pulse" />
+                  </h2>
+                  <p className="text-blue-100 text-sm font-medium">
+                    Gerencie agendamentos e visualize a agenda da equipe
+                  </p>
                 </div>
               </div>
-              
-              {/* Navegação de data premium */}
-              <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md rounded-2xl p-2 shadow-lg">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+
+              {/* Navegação de data compacta */}
+              <div className="flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-xl p-1.5 shadow-lg">
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setDataSelecionada(new Date().toISOString().split('T')[0])}
-                  className="text-white hover:bg-white/20 rounded-xl px-4 py-2 font-medium"
+                  className="text-white hover:bg-white/20 rounded-lg px-3 py-1.5 text-sm font-medium"
                 >
                   Hoje
                 </Button>
@@ -745,15 +977,15 @@ function Cronograma() {
                     data.setDate(data.getDate() - 1)
                     setDataSelecionada(data.toISOString().split('T')[0])
                   }}
-                  className="text-white hover:bg-white/20 rounded-xl h-10 w-10 p-0"
+                  className="text-white hover:bg-white/20 rounded-lg h-8 w-8 p-0"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <input
                   type="date"
                   value={dataSelecionada}
                   onChange={(e) => setDataSelecionada(e.target.value)}
-                  className="font-bold text-white min-w-[160px] text-center px-4 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20 focus:ring-2 focus:ring-white/50"
+                  className="font-medium text-white min-w-[140px] text-center px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 focus:ring-2 focus:ring-white/50 text-sm"
                 />
                 <Button
                   variant="ghost"
@@ -763,128 +995,165 @@ function Cronograma() {
                     data.setDate(data.getDate() + 1)
                     setDataSelecionada(data.toISOString().split('T')[0])
                   }}
-                  className="text-white hover:bg-white/20 rounded-xl h-10 w-10 p-0"
+                  className="text-white hover:bg-white/20 rounded-lg h-8 w-8 p-0"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
-            
-            {/* Linha 2: Filtros integrados */}
-            <div className="flex flex-col xl:flex-row gap-4">
 
-
-              {/* Filtros por Funcionário integrados */}
-              <div className="flex flex-wrap gap-2 items-center">
-                <Button
-                  variant={funcionarioSelecionado === 'todos' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setFuncionarioSelecionado('todos')}
-                  className={`text-white hover:bg-white/20 flex items-center justify-center ${funcionarioSelecionado === 'todos' ? 'bg-white/30' : ''}`}
-                >
-                  <Users className="w-4 h-4 mr-1" />
-                  Todos ({agenda?.filter(item => {
-                    const itemData = item.data || new Date().toISOString().split('T')[0]
-                    return itemData === dataSelecionada
-                  }).length || 0})
-                </Button>
-                
-                {funcionarios?.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => {
-                  const tarefasFuncionario = agenda?.filter(item => {
-                    const itemData = item.data || new Date().toISOString().split('T')[0]
-                    return itemData === dataSelecionada && item.funcionario === funcionario.id
-                  }).length || 0
-                  const isSelected = funcionarioSelecionado === funcionario.id
-                  return (
-                    <Button
-                      key={funcionario.id}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setFuncionarioSelecionado(funcionario.id)}
-                      className="text-white hover:bg-white/20 flex items-center justify-center"
-                      style={{
-                        backgroundColor: isSelected ? funcionario.cor : 'rgba(255,255,255,0.1)',
-                        borderColor: funcionario.cor,
-                        color: 'white'
-                      }}
-                    >
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2"
-                        style={{ backgroundColor: funcionario.cor }}
-                      />
-                      {funcionario.nome} ({tarefasFuncionario})
-                    </Button>
-                  )
-                })}
-              </div>
-
-              {/* Modo de Visualização integrado */}
-              <div className="flex gap-1 bg-white/10 rounded-lg p-1 items-center">
-                <Button
-                  variant={visualizacao === 'timeline' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setVisualizacao('timeline')}
-                  className={`text-white hover:bg-white/20 flex items-center justify-center ${visualizacao === 'timeline' ? 'bg-white/30' : ''}`}
-                >
-                  <List className="w-4 h-4 mr-1" />
-                  Timeline
-                </Button>
-                <Button
-                  variant={visualizacao === 'grade' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setVisualizacao('grade')}
-                  className={`text-white hover:bg-white/20 flex items-center justify-center ${visualizacao === 'grade' ? 'bg-white/30' : ''}`}
-                >
-                  <Grid3X3 className="w-4 h-4 mr-1" />
-                  Grade
-                </Button>
-                <Button
-                  variant={visualizacao === 'vertical' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setVisualizacao('vertical')}
-                  className={`text-white hover:bg-white/20 flex items-center justify-center ${visualizacao === 'vertical' ? 'bg-white/30' : ''}`}
-                >
-                  <BarChart3 className="w-4 h-4 mr-1" />
-                  Grade Vertical
-                </Button>
-              </div>
-
-              {/* Controles de Seleção Múltipla */}
-              <div className="flex gap-1 bg-white/10 rounded-lg p-1 items-center">
-                {!modoSelecaoMultipla ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setModoSelecaoMultipla(true)}
-                    className="text-white hover:bg-white/20 flex items-center justify-center"
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-1" />
-                    Seleção Múltipla
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={marcarTodasSelecionadasComoConcluidas}
-                      className="text-white hover:bg-green-500/20 bg-green-500/10 flex items-center justify-center"
-                      disabled={tarefasSelecionadas.size === 0}
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-1" />
-                      Concluir ({tarefasSelecionadas.size})
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={cancelarSelecaoMultipla}
-                      className="text-white hover:bg-red-500/20 bg-red-500/10 flex items-center justify-center"
-                    >
-                      <X className="w-4 h-4 mr-1" />
-                      Cancelar
-                    </Button>
-                  </>
+            {/* Linha 2: Informações e Controles */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+              {/* Info do dia */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/30 shadow-lg">
+                  <Calendar className="w-4 h-4 text-white/90" />
+                  <span className="text-white font-medium text-sm">
+                    {new Date(dataSelecionada + 'T00:00:00').toLocaleDateString('pt-BR', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long'
+                    })}
+                  </span>
+                </div>
+                <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-400/30 px-2 py-1 rounded-lg font-medium text-sm">
+                  {dadosFiltrados.length} agendamento{dadosFiltrados.length !== 1 ? 's' : ''}
+                </Badge>
+                {isDragging && (
+                  <Badge className="bg-blue-500/20 text-blue-100 border-blue-400/30 px-2 py-1 rounded-lg font-medium animate-pulse text-sm">
+                    🎯 Arrastando...
+                  </Badge>
                 )}
               </div>
+
+              {/* Controles principais */}
+              <div className="flex items-center gap-2">
+                {/* Modo de Visualização */}
+                <div className="flex gap-1 bg-white/10 rounded-lg p-1">
+                  <Button
+                    variant={visualizacao === 'timeline' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setVisualizacao('timeline')}
+                    className={`text-white hover:bg-white/20 px-2 py-1 text-xs ${visualizacao === 'timeline' ? 'bg-white/30' : ''}`}
+                  >
+                    <List className="w-3 h-3 mr-1" />
+                    Timeline
+                  </Button>
+                  <Button
+                    variant={visualizacao === 'grade' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setVisualizacao('grade')}
+                    className={`text-white hover:bg-white/20 px-2 py-1 text-xs ${visualizacao === 'grade' ? 'bg-white/30' : ''}`}
+                  >
+                    <Grid3X3 className="w-3 h-3 mr-1" />
+                    Grade
+                  </Button>
+                  <Button
+                    variant={visualizacao === 'vertical' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setVisualizacao('vertical')}
+                    className={`text-white hover:bg-white/20 px-2 py-1 text-xs ${visualizacao === 'vertical' ? 'bg-white/30' : ''}`}
+                  >
+                    <BarChart3 className="w-3 h-3 mr-1" />
+                    Vertical
+                  </Button>
+                </div>
+
+                {/* Ações */}
+                <div className="flex gap-1 bg-white/10 rounded-lg p-1">
+                  {!modoSelecaoMultipla ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setModoSelecaoMultipla(true)}
+                        className="text-white hover:bg-white/20 px-2 py-1 text-xs"
+                      >
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        Seleção
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDuplicarTarefas}
+                        className="text-white hover:bg-white/20 px-2 py-1 text-xs"
+                        disabled={dadosFiltrados.length === 0}
+                      >
+                        <Calendar className="w-3 h-3 mr-1" />
+                        Duplicar
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={marcarTodasSelecionadasComoConcluidas}
+                        className="text-white hover:bg-white/20 px-2 py-1 text-xs"
+                        disabled={tarefasSelecionadas.size === 0}
+                      >
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        Concluir ({tarefasSelecionadas.size})
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={cancelarSelecaoMultipla}
+                        className="text-white hover:bg-white/20 px-2 py-1 text-xs"
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        Cancelar
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Linha 3: Filtros por Funcionário */}
+            <div className="flex flex-wrap gap-2 items-center">
+
+
+              <Button
+                variant={funcionarioSelecionado === 'todos' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setFuncionarioSelecionado('todos')}
+                className={`text-white hover:bg-white/20 text-xs px-2 py-1 ${funcionarioSelecionado === 'todos' ? 'bg-white/30' : ''}`}
+              >
+                <Users className="w-3 h-3 mr-1" />
+                Todos ({agenda?.filter(item => {
+                  const itemData = item.data || new Date().toISOString().split('T')[0]
+                  return itemData === dataSelecionada
+                }).length || 0})
+              </Button>
+
+              {funcionarios?.filter(funcionario => funcionario.id && funcionario.id.trim() !== '').map(funcionario => {
+                const tarefasFuncionario = agenda?.filter(item => {
+                  const itemData = item.data || new Date().toISOString().split('T')[0]
+                  return itemData === dataSelecionada && item.funcionario === funcionario.id
+                }).length || 0
+                const isSelected = funcionarioSelecionado === funcionario.id
+                return (
+                  <Button
+                    key={funcionario.id}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFuncionarioSelecionado(funcionario.id)}
+                    className="text-white hover:bg-white/20 text-xs px-2 py-1"
+                    style={{
+                      backgroundColor: isSelected ? funcionario.cor : 'rgba(255,255,255,0.1)',
+                      borderColor: funcionario.cor,
+                      color: 'white'
+                    }}
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full mr-1"
+                      style={{ backgroundColor: funcionario.cor }}
+                    />
+                    {funcionario.nome} ({tarefasFuncionario})
+                  </Button>
+                )
+              })}
 
               {/* Navegação entre datas */}
               {datasComAgendamentos.length > 1 && (
@@ -932,7 +1201,7 @@ function Cronograma() {
               <p className="text-xs text-gray-600">agendamentos</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -945,7 +1214,7 @@ function Cronograma() {
               <p className="text-xs text-gray-600">funcionários</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -961,7 +1230,7 @@ function Cronograma() {
               <p className="text-xs text-gray-600">estimado</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -998,9 +1267,9 @@ function Cronograma() {
       </Card>
 
       {/* Visualização */}
-      {visualizacao === 'timeline' ? <TimelineView /> : 
-       visualizacao === 'grade' ? <GridView /> : 
-       <GridVerticalView />}
+      {visualizacao === 'timeline' ? <TimelineView /> :
+        visualizacao === 'grade' ? <GridView /> :
+          <GridVerticalView />}
 
       {/* Modal de Agendamento */}
       <AgendamentoForm
@@ -1013,6 +1282,138 @@ function Cronograma() {
         horarioInicial={novoAgendamento.horario}
         funcionarioInicial={novoAgendamento.funcionario_id}
       />
+
+      {/* Modal de Duplicação de Tarefas */}
+      {modalDuplicacao && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Duplicar Tarefas do Dia
+              </CardTitle>
+              <CardDescription>
+                Selecione as datas para onde deseja duplicar as {dadosFiltrados.filter(t => t.data === dataSelecionada).length} tarefa(s) do dia {new Date(dataSelecionada + 'T00:00:00').toLocaleDateString('pt-BR')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Datas selecionadas */}
+              {datasDuplicacao.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Datas selecionadas:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {datasDuplicacao.map(data => (
+                      <Badge key={data} variant="secondary" className="flex items-center gap-1">
+                        {new Date(data + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-red-100"
+                          onClick={() => removerDataDuplicacao(data)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Seleção manual de data */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Adicionar data:</h4>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    className="flex-1 px-3 py-2 border rounded-md"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        adicionarDataDuplicacao(e.target.value)
+                        e.target.value = ''
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Atalhos para próximos dias */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Atalhos:</h4>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      gerarProximosDias(7).forEach(data => adicionarDataDuplicacao(data))
+                    }}
+                  >
+                    Próximos 7 dias
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Próximos dias úteis (segunda a sexta)
+                      const diasUteis = []
+                      const hoje = new Date(dataSelecionada)
+                      let contador = 0
+                      let dia = 1
+
+                      while (contador < 5) {
+                        const proximoDia = new Date(hoje)
+                        proximoDia.setDate(hoje.getDate() + dia)
+                        const diaSemana = proximoDia.getDay()
+
+                        if (diaSemana >= 1 && diaSemana <= 5) { // Segunda a sexta
+                          diasUteis.push(proximoDia.toISOString().split('T')[0])
+                          contador++
+                        }
+                        dia++
+                      }
+
+                      diasUteis.forEach(data => adicionarDataDuplicacao(data))
+                    }}
+                  >
+                    Próximos 5 dias úteis
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Próxima semana (mesmo dia da semana)
+                      const proximaSemana = new Date(dataSelecionada)
+                      proximaSemana.setDate(proximaSemana.getDate() + 7)
+                      adicionarDataDuplicacao(proximaSemana.toISOString().split('T')[0])
+                    }}
+                  >
+                    Próxima semana
+                  </Button>
+                </div>
+              </div>
+
+              {/* Botões de ação */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setModalDuplicacao(false)
+                    setDatasDuplicacao([])
+                  }}
+                  disabled={duplicandoTarefas}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmarDuplicacao}
+                  disabled={datasDuplicacao.length === 0 || duplicandoTarefas}
+                >
+                  {duplicandoTarefas ? 'Duplicando...' : `Duplicar para ${datasDuplicacao.length} dia(s)`}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

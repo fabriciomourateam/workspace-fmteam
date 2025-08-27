@@ -27,6 +27,7 @@ import { ApiStatus } from './components/ApiStatus'
 import './App.css'
 import './styles/animations.css'
 import './styles/themes.css'
+import './styles/drag-drop.css'
 
 function Navigation() {
   const location = useLocation()
