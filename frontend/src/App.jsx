@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Calendar, Users, FileText, BarChart3, Clock, Filter, Settings, CalendarDays, Search, Menu, X, AlertTriangle } from 'lucide-react'
+import { Calendar, Users, FileText, BarChart3, Clock, Filter, Settings, CalendarDays, Search, Menu, X, AlertTriangle, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +18,7 @@ import Dashboard from './components/Dashboard'
 import Cronograma from './components/Cronograma'
 import Processos from './components/Processos'
 import DemandasImportantes from './components/DemandasImportantes'
+import TarefasAFazer from './components/TarefasAFazer'
 import Relatorios from './components/Relatorios'
 import Admin from './components/Admin'
 import CalendarioAgendamentos from './components/CalendarioAgendamentos'
@@ -52,7 +53,7 @@ function Navigation() {
     { path: '/', icon: BarChart3, label: 'Dashboard', shortcut: '1', compact: 'Dash' },
     { path: '/cronograma', icon: Calendar, label: 'Cronograma', shortcut: '2', compact: 'Crono' },
     { path: '/calendario', icon: CalendarDays, label: 'Calendário', shortcut: '3', compact: 'Cal' },
-    { path: '/demandas', icon: AlertTriangle, label: 'Demandas', shortcut: '4', compact: 'Dem' }
+    { path: '/demandas', icon: Target, label: 'Tarefas à Fazer', shortcut: '4', compact: 'Tarefas' }
   ]
 
   // Itens secundários (no menu dropdown)
@@ -348,7 +349,7 @@ function AppContent() {
 
               <Route path="/cronograma" element={<Cronograma />} />
               <Route path="/calendario" element={<CalendarioAgendamentos />} />
-              <Route path="/demandas" element={<DemandasImportantes />} />
+              <Route path="/demandas" element={<TarefasAFazer />} />
               <Route path="/processos" element={<Processos />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/admin" element={<Admin />} />

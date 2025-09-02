@@ -89,6 +89,111 @@ class SupabaseService {
     if (error) throw error
   }
 
+  // Tarefas a Fazer (tabela específica para tarefas delegadas)
+  async getTarefasAFazer() {
+    try {
+      // Primeiro, tenta buscar com relacionamento
+      let { data, error } = await supabase
+        .from('tarefas_a_fazer')
+        .select(`
+          *,
+          funcionario:funcionarios(nome, email)
+        `)
+        .order('prazo', { ascending: true })
+
+      if (error) {
+        console.warn('Erro ao buscar com relacionamento, tentando sem:', error.message)
+        
+        // Se falhar com relacionamento, tenta sem
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('tarefas_a_fazer')
+          .select('*')
+          .order('prazo', { ascending: true })
+
+        if (simpleError) {
+          console.error('Erro ao buscar tarefas_a_fazer:', simpleError)
+          return []
+        }
+
+        return simpleData || []
+      }
+
+      return data || []
+    } catch (error) {
+      console.error('Erro ao buscar tarefas a fazer:', error)
+      return []
+    }
+  }
+
+  async createTarefaAFazer(tarefa) {
+    try {
+      // Validar dados obrigatórios
+      if (!tarefa.titulo || !tarefa.descricao || !tarefa.funcionario_responsavel_id || !tarefa.prazo) {
+        throw new Error('Campos obrigatórios: título, descrição, funcionário responsável e prazo')
+      }
+
+      // Formatar dados antes de inserir
+      const tarefaFormatada = {
+        titulo: tarefa.titulo.trim(),
+        descricao: tarefa.descricao.trim(),
+        funcionario_responsavel_id: tarefa.funcionario_responsavel_id,
+        importancia: tarefa.importancia || 'media',
+        concluida: tarefa.concluida || false,
+        prazo: tarefa.prazo,
+        telefone_whatsapp: tarefa.telefone_whatsapp || '',
+        mensagem_whatsapp: tarefa.mensagem_whatsapp || '',
+        observacoes: tarefa.observacoes || '',
+        data_criacao: new Date().toISOString()
+      }
+
+      const { data, error } = await supabase
+        .from('tarefas_a_fazer')
+        .insert([tarefaFormatada])
+        .select()
+
+      if (error) {
+        console.error('Erro ao criar tarefa:', error)
+        throw new Error(`Erro ao criar tarefa: ${error.message}`)
+      }
+
+      return data[0]
+    } catch (error) {
+      console.error('Erro na função createTarefaAFazer:', error)
+      throw error
+    }
+  }
+
+  async updateTarefaAFazer(id, updates) {
+    const { data, error } = await supabase
+      .from('tarefas_a_fazer')
+      .update(updates)
+      .eq('id', id)
+      .select()
+
+    if (error) throw error
+    return data[0]
+  }
+
+  async deleteTarefaAFazer(id) {
+    const { error } = await supabase
+      .from('tarefas_a_fazer')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+  }
+
+  async toggleTarefaConcluida(id, concluida) {
+    const { data, error } = await supabase
+      .from('tarefas_a_fazer')
+      .update({ concluida })
+      .eq('id', id)
+      .select()
+
+    if (error) throw error
+    return data[0]
+  }
+
   // Agenda
   async getAgenda() {
     // Buscar todos os agendamentos sem limite de data ou quantidade

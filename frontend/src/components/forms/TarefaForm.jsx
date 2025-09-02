@@ -1,92 +1,59 @@
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-// import { useNotifications } from '../../contexts/NotificationContext'
+import { Checkbox } from '@/components/ui/checkbox'
+import { AlertTriangle, Save, X, Target, MessageCircle } from 'lucide-react'
 
-const CATEGORIAS = [
-  'gestao', 'atendimento', 'marketing', 'engajamento', 
-  'conteudo', 'produto', 'interno', 'vendas'
-]
-
-const PRIORIDADES = [
-  { value: 'baixa', label: 'Baixa', color: 'text-green-600' },
-  { value: 'media', label: 'Média', color: 'text-yellow-600' },
-  { value: 'alta', label: 'Alta', color: 'text-red-600' }
-]
-
-export default function TarefaForm({ 
-  isOpen, 
-  onClose, 
-  tarefa = null, 
-  onSave 
-}) {
-  const showSuccess = (message) => alert('✅ ' + message)
-  const showError = (message) => alert('❌ ' + message)
+export default function TarefaForm({ isOpen, onClose, tarefa, funcionarios, onSave }) {
   const [loading, setLoading] = useState(false)
-  
   const [formData, setFormData] = useState({
-    id: tarefa?.id || '',
-    nome: tarefa?.nome || '',
-    categoria: tarefa?.categoria || 'gestao',
-    tempo_estimado: 30, // Sempre 30 minutos
-    descricao: tarefa?.descricao || '',
-    prioridade: tarefa?.prioridade || 'media'
+    titulo: '',
+    descricao: '',
+    funcionario_responsavel_id: '',
+    importancia: 'media',
+    concluida: false,
+    prazo: '',
+    observacoes: ''
   })
 
-  // Atualizar formData quando tarefa mudar, mas sempre manter 30 min
-  React.useEffect(() => {
+  useEffect(() => {
     if (tarefa) {
       setFormData({
-        id: tarefa.id || '',
-        nome: tarefa.nome || '',
-        categoria: tarefa.categoria || 'gestao',
-        tempo_estimado: 30, // Sempre 30 minutos, independente do valor da tarefa
+        titulo: tarefa.titulo || '',
         descricao: tarefa.descricao || '',
-        prioridade: tarefa.prioridade || 'media'
+        funcionario_responsavel_id: tarefa.funcionario_responsavel_id || '',
+        importancia: tarefa.importancia || 'media',
+        concluida: tarefa.concluida || false,
+        prazo: tarefa.prazo || '',
+        observacoes: tarefa.observacoes || ''
       })
     } else {
       setFormData({
-        id: '',
-        nome: '',
-        categoria: 'gestao',
-        tempo_estimado: 30, // Sempre 30 minutos
+        titulo: '',
         descricao: '',
-        prioridade: 'media'
+        funcionario_responsavel_id: '',
+        importancia: 'media',
+        concluida: false,
+        prazo: '',
+        observacoes: ''
       })
     }
-  }, [tarefa, isOpen])
+  }, [tarefa])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      // Validação básica
-      if (!formData.nome.trim()) {
-        throw new Error('Nome é obrigatório')
-      }
-      
-      if (!formData.id || !formData.id.trim()) {
-        throw new Error('ID é obrigatório e não pode estar vazio')
-      }
-
-      // Tempo sempre será 30 minutos, não precisa validar
-
       await onSave(formData)
-      
-      showSuccess(
-        tarefa 
-          ? 'Tarefa atualizada com sucesso!' 
-          : 'Tarefa criada com sucesso!'
-      )
-      
       onClose()
     } catch (error) {
-      showError(error.message)
+      console.error('Erro ao salvar tarefa:', error)
+      alert('Erro ao salvar tarefa: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -99,129 +66,167 @@ export default function TarefaForm({
     }))
   }
 
+  // Calcular se o prazo está próximo ou passou
+  const calcularStatusPrazo = (prazo) => {
+    if (!prazo) return null
+    
+    const hoje = new Date()
+    const dataPrazo = new Date(prazo)
+    const diffTime = dataPrazo - hoje
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays < 0) return { tipo: 'atrasado', dias: Math.abs(diffDays) }
+    if (diffDays === 0) return { tipo: 'hoje', dias: 0 }
+    if (diffDays <= 2) return { tipo: 'urgente', dias: diffDays }
+    if (diffDays <= 7) return { tipo: 'proximo', dias: diffDays }
+    return { tipo: 'normal', dias: diffDays }
+  }
+
+  const statusPrazo = calcularStatusPrazo(formData.prazo)
+
+  // Mensagem padrão gerada automaticamente no sistema
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Target className="w-5 h-5" />
             {tarefa ? 'Editar Tarefa' : 'Nova Tarefa'}
           </DialogTitle>
           <DialogDescription>
-            {tarefa 
-              ? 'Edite as informações da tarefa abaixo.'
-              : 'Preencha as informações da nova tarefa.'
-            }
+            {tarefa ? 'Atualize as informações da tarefa' : 'Crie uma nova tarefa à fazer'}
           </DialogDescription>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="id">ID da Tarefa</Label>
-            <Input
-              id="id"
-              value={formData.id}
-              onChange={(e) => handleChange('id', e.target.value)}
-              placeholder="ex: nova_tarefa"
-              disabled={!!tarefa} // Não permite editar ID existente
-              required
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="nome">Nome da Tarefa</Label>
-            <Input
-              id="nome"
-              value={formData.nome}
-              onChange={(e) => handleChange('nome', e.target.value)}
-              placeholder="Nome da tarefa"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="categoria">Categoria</Label>
-              <Select 
-                value={formData.categoria} 
-                onValueChange={(value) => handleChange('categoria', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIAS.map(categoria => (
-                    <SelectItem key={categoria} value={categoria}>
-                      {categoria.charAt(0).toUpperCase() + categoria.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Informações Básicas */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="titulo">Título da Tarefa *</Label>
+              <Input
+                id="titulo"
+                value={formData.titulo}
+                onChange={(e) => handleChange('titulo', e.target.value)}
+                placeholder="Ex: Implementar nova funcionalidade"
+                required
+              />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="tempo_estimado">Tempo (minutos)</Label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  id="tempo_estimado"
-                  type="number"
-                  value={30}
-                  readOnly
-                  disabled
-                  className="bg-gray-100 cursor-not-allowed"
-                />
-                <span className="text-sm text-gray-500">
-                  ⏱️ Todas as tarefas têm 30 minutos
-                </span>
-              </div>
+            <div>
+              <Label htmlFor="descricao">Descrição *</Label>
+              <Textarea
+                id="descricao"
+                value={formData.descricao}
+                onChange={(e) => handleChange('descricao', e.target.value)}
+                placeholder="Descreva detalhadamente o que precisa ser feito"
+                rows={3}
+                required
+              />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="prioridade">Prioridade</Label>
-            <Select 
-              value={formData.prioridade} 
-              onValueChange={(value) => handleChange('prioridade', value)}
+          {/* Responsável */}
+          <div>
+            <Label htmlFor="funcionario_responsavel">Responsável *</Label>
+            <Select
+              value={formData.funcionario_responsavel_id}
+              onValueChange={(value) => handleChange('funcionario_responsavel_id', value)}
+              required
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione a prioridade" />
+                <SelectValue placeholder="Selecione o responsável" />
               </SelectTrigger>
               <SelectContent>
-                {PRIORIDADES.map(prioridade => (
-                  <SelectItem key={prioridade.value} value={prioridade.value}>
-                    <span className={prioridade.color}>
-                      {prioridade.label}
-                    </span>
+                {funcionarios.map(funcionario => (
+                  <SelectItem key={funcionario.id} value={funcionario.id}>
+                    {funcionario.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="descricao">Descrição</Label>
+          {/* Importância e Concluída */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="importancia">Importância</Label>
+              <Select
+                value={formData.importancia}
+                onValueChange={(value) => handleChange('importancia', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                  <SelectItem value="media">Média</SelectItem>
+                  <SelectItem value="alta">Alta</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="concluida"
+                checked={formData.concluida}
+                onCheckedChange={(checked) => handleChange('concluida', checked)}
+              />
+              <Label htmlFor="concluida" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Tarefa Concluída
+              </Label>
+            </div>
+          </div>
+
+          {/* Prazo */}
+          <div>
+            <Label htmlFor="prazo">Prazo *</Label>
+            <Input
+              id="prazo"
+              type="date"
+              value={formData.prazo}
+              onChange={(e) => handleChange('prazo', e.target.value)}
+              required
+            />
+            {statusPrazo && (
+              <div className={`mt-2 text-sm ${
+                statusPrazo.tipo === 'atrasado' ? 'text-red-600' :
+                statusPrazo.tipo === 'urgente' ? 'text-yellow-600' :
+                statusPrazo.tipo === 'proximo' ? 'text-blue-600' :
+                'text-gray-600'
+              }`}>
+                {statusPrazo.tipo === 'atrasado' && `⚠️ ${statusPrazo.dias} dias atrasado`}
+                {statusPrazo.tipo === 'hoje' && '⚠️ Vence hoje'}
+                {statusPrazo.tipo === 'urgente' && `⚠️ Vence em ${statusPrazo.dias} dias`}
+                {statusPrazo.tipo === 'proximo' && `Vence em ${statusPrazo.dias} dias`}
+                {statusPrazo.tipo === 'normal' && `${statusPrazo.dias} dias restantes`}
+              </div>
+            )}
+          </div>
+
+          {/* WhatsApp configurado no n8n - não é necessário preencher aqui */}
+
+          {/* Observações */}
+          <div>
+            <Label htmlFor="observacoes">Observações</Label>
             <Textarea
-              id="descricao"
-              value={formData.descricao}
-              onChange={(e) => handleChange('descricao', e.target.value)}
-              placeholder="Descrição detalhada da tarefa..."
-              rows={3}
+              id="observacoes"
+              value={formData.observacoes}
+              onChange={(e) => handleChange('observacoes', e.target.value)}
+              placeholder="Informações adicionais, contexto, etc."
+              rows={2}
             />
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose}
-              disabled={loading}
-            >
+          {/* Botões */}
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose}>
+              <X className="w-4 h-4 mr-2" />
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
-              disabled={loading}
-            >
-              {loading ? 'Salvando...' : 'Salvar'}
+            <Button type="submit" disabled={loading}>
+              <Save className="w-4 h-4 mr-2" />
+              {loading ? 'Salvando...' : 'Salvar Tarefa'}
             </Button>
           </div>
         </form>

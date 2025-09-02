@@ -90,3 +90,7 @@ export function useAgendaFuncionario(funcionarioId) {
 export function useDemandas() {
   return useApi(() => supabaseService.getDemandas(), []);
 }
+
+export function useTarefasAFazer() {
+  return useApi(() => supabaseService.getTarefasAFazer(), []);
+}
