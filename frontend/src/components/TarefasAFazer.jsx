@@ -348,7 +348,16 @@ export default function TarefasAFazer() {
   }
 
   const enviarWhatsapp = (tarefa) => {
-    const telefone = tarefa.telefone_whatsapp || ''
+    // Para envio direto via WhatsApp Web, precisamos do telefone
+    // Se não tiver telefone na tarefa, buscar do funcionário responsável
+    const funcionarioResponsavel = funcionarios?.find(f => f.id === tarefa.funcionario_responsavel_id)
+    const telefone = tarefa.telefone_whatsapp || funcionarioResponsavel?.telefone || ''
+    
+    if (!telefone) {
+      alert('Telefone não encontrado. Use o botão "Enviar Direto" para enviar via webhook.')
+      return
+    }
+    
     const mensagem = tarefa.mensagem_whatsapp || `Olá! Você foi designado para: ${tarefa.titulo}. Prazo: ${new Date(tarefa.prazo).toLocaleDateString('pt-BR')}`
     
     const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`
@@ -477,13 +486,11 @@ export default function TarefasAFazer() {
                   size="sm"
                   onClick={() => handleWhatsapp(tarefa)}
                   className="h-8 w-8 p-0 text-green-600 hover:text-green-700 relative"
-                  disabled={!tarefa.telefone_whatsapp}
-                  title={tarefa.telefone_whatsapp ? "Enviar WhatsApp" : "Telefone não configurado"}
+                  disabled={false}
+                  title="Enviar WhatsApp via webhook (telefone configurado no n8n)"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  {tarefa.telefone_whatsapp && (
-                    <ZapIcon className="w-2 h-2 absolute -top-1 -right-1 text-blue-600" />
-                  )}
+                  <ZapIcon className="w-2 h-2 absolute -top-1 -right-1 text-blue-600" />
                 </Button>
 
                 <Button
@@ -761,7 +768,7 @@ export default function TarefasAFazer() {
               Enviar WhatsApp
             </DialogTitle>
             <DialogDescription>
-              Envie uma mensagem para delegar esta tarefa (telefone configurado no n8n)
+              Escolha como enviar a mensagem: via webhook (automático) ou WhatsApp Web (manual)
             </DialogDescription>
           </DialogHeader>
           
@@ -805,35 +812,42 @@ export default function TarefasAFazer() {
                 </div>
               )}
               
-              <div className="flex gap-2">
-                {/* Botão de envio direto via webhook */}
-                <Button
-                  onClick={() => enviarViaWebhook(tarefaWhatsapp)}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  disabled={enviandoWebhook}
-                >
-                  {enviandoWebhook ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <ZapIcon className="w-4 h-4 mr-2" />
-                      Enviar Direto
-                    </>
-                  )}
-                </Button>
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600">
+                  <p><strong>Webhook (Recomendado):</strong> Envio automático via n8n + Evolution API</p>
+                  <p><strong>WhatsApp Web:</strong> Abre o WhatsApp Web para envio manual</p>
+                </div>
                 
-                {/* Botão de envio via WhatsApp Web */}
-                <Button
-                  onClick={() => enviarWhatsapp(tarefaWhatsapp)}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                  disabled={false}
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  WhatsApp Web
-                </Button>
+                <div className="flex gap-2">
+                  {/* Botão de envio direto via webhook */}
+                  <Button
+                    onClick={() => enviarViaWebhook(tarefaWhatsapp)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    disabled={enviandoWebhook}
+                  >
+                    {enviandoWebhook ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <ZapIcon className="w-4 h-4 mr-2" />
+                        Enviar via Webhook
+                      </>
+                    )}
+                  </Button>
+                  
+                  {/* Botão de envio via WhatsApp Web */}
+                  <Button
+                    onClick={() => enviarWhatsapp(tarefaWhatsapp)}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    disabled={false}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    WhatsApp Web
+                  </Button>
+                </div>
               </div>
               
               <div className="flex gap-2">
