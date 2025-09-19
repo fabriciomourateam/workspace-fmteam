@@ -1390,62 +1390,43 @@ function Cronograma() {
 
 
 
-      {/* Resumo do dia - Ultra Compacto */}
+      {/* Resumo do dia - Micro Compacto */}
       {dadosFiltrados.length > 0 && (
-        <div className="grid grid-cols-4 gap-2">
-          <div className="bg-white/50 backdrop-blur-sm rounded-md p-2 border border-white/20">
-            <div className="text-center">
-              <p className="text-xs text-gray-500">Total</p>
-              <p className="text-lg font-bold text-blue-600">{dadosFiltrados.length}</p>
-            </div>
-          </div>
-          
-          <div className="bg-white/50 backdrop-blur-sm rounded-md p-2 border border-white/20">
-            <div className="text-center">
-              <p className="text-xs text-gray-500">Ativos</p>
-              <p className="text-lg font-bold text-green-600">
-                {new Set(dadosFiltrados.map(item => item.funcionario)).size}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white/50 backdrop-blur-sm rounded-md p-2 border border-white/20">
-            <div className="text-center">
-              <p className="text-xs text-gray-500">Tempo</p>
-              <p className="text-lg font-bold text-orange-600">
+        <div className="flex items-center justify-between bg-white/30 backdrop-blur-sm rounded px-3 py-1.5 text-xs border border-white/20">
+          <div className="flex items-center gap-4">
+            <span className="text-gray-600">
+              <strong className="text-blue-600">{dadosFiltrados.length}</strong> agendamentos
+            </span>
+            <span className="text-gray-600">
+              <strong className="text-green-600">{new Set(dadosFiltrados.map(item => item.funcionario)).size}</strong> ativos
+            </span>
+            <span className="text-gray-600">
+              <strong className="text-orange-600">
                 {Math.round(dadosFiltrados.reduce((acc, item) => {
                   const tarefa = tarefas?.find(t => t.id === item.tarefa)
                   return acc + (tarefa?.tempo_estimado || 30)
                 }, 0) / 60)}h
-              </p>
-            </div>
+              </strong> estimado
+            </span>
+            <span className="text-gray-600">
+              <strong className="text-purple-600">{dadosFiltrados.filter(item => item.status === 'concluida').length}</strong> concluídas
+            </span>
           </div>
-
-          <div className="bg-white/50 backdrop-blur-sm rounded-md p-2 border border-white/20">
-            <div className="text-center">
-              <p className="text-xs text-gray-500">Concluídas</p>
-              <p className="text-lg font-bold text-purple-600">
-                {dadosFiltrados.filter(item => item.status === 'concluida').length}
-              </p>
-            </div>
+          
+          {/* Legenda inline */}
+          <div className="flex items-center gap-2 text-xs">
+            {Object.entries(categoriasCores).slice(0, 4).map(([categoria, cor]) => (
+              <div key={categoria} className="flex items-center gap-1">
+                <div className={`w-1.5 h-1.5 rounded-full ${cor}`} />
+                <span className="text-gray-500 capitalize">{categoria}</span>
+              </div>
+            ))}
+            {Object.keys(categoriasCores).length > 4 && (
+              <span className="text-gray-400">+{Object.keys(categoriasCores).length - 4}</span>
+            )}
           </div>
         </div>
       )}
-
-      {/* Legenda de categorias - Ultra Compacta */}
-      <div className="bg-white/40 backdrop-blur-sm rounded-md p-2 border border-white/20">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <span className="text-xs font-medium text-gray-600">Categorias:</span>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(categoriasCores).map(([categoria, cor]) => (
-              <div key={categoria} className="flex items-center gap-1">
-                <div className={`w-2 h-2 rounded-full ${cor}`} />
-                <span className="text-xs text-gray-600 capitalize">{categoria}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {/* Visualização */}
       {visualizacao === 'timeline' ? <TimelineView /> :
