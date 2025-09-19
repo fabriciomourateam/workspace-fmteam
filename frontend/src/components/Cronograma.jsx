@@ -1390,85 +1390,78 @@ function Cronograma() {
 
 
 
-      {/* Resumo do dia */}
+      {/* Resumo do dia - Versão Minimalista */}
       {dadosFiltrados.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4 text-blue-500" />
-                <span className="text-sm font-medium">Total</span>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Total</p>
+                <p className="text-lg font-semibold text-blue-600">{dadosFiltrados.length}</p>
+                <p className="text-xs text-gray-400">agendamentos</p>
               </div>
-              <p className="text-2xl font-bold text-blue-600">
-                {dadosFiltrados.length}
-              </p>
-              <p className="text-xs text-gray-600">agendamentos</p>
-            </CardContent>
-          </Card>
+              <Calendar className="w-5 h-5 text-blue-400 opacity-60" />
+            </div>
+          </div>
+          
+          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Ativos</p>
+                <p className="text-lg font-semibold text-green-600">
+                  {new Set(dadosFiltrados.map(item => item.funcionario)).size}
+                </p>
+                <p className="text-xs text-gray-400">funcionários</p>
+              </div>
+              <Users className="w-5 h-5 text-green-400 opacity-60" />
+            </div>
+          </div>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-green-500" />
-                <span className="text-sm font-medium">Ativos</span>
+          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Tempo</p>
+                <p className="text-lg font-semibold text-orange-600">
+                  {Math.round(dadosFiltrados.reduce((acc, item) => {
+                    const tarefa = tarefas?.find(t => t.id === item.tarefa)
+                    return acc + (tarefa?.tempo_estimado || 30)
+                  }, 0) / 60)}h
+                </p>
+                <p className="text-xs text-gray-400">estimado</p>
               </div>
-              <p className="text-2xl font-bold text-green-600">
-                {new Set(dadosFiltrados.map(item => item.funcionario)).size}
-              </p>
-              <p className="text-xs text-gray-600">funcionários</p>
-            </CardContent>
-          </Card>
+              <Clock className="w-5 h-5 text-orange-400 opacity-60" />
+            </div>
+          </div>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-4 h-4 text-orange-500" />
-                <span className="text-sm font-medium">Tempo</span>
+          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Concluídas</p>
+                <p className="text-lg font-semibold text-purple-600">
+                  {dadosFiltrados.filter(item => item.status === 'concluida').length}
+                </p>
+                <p className="text-xs text-gray-400">finalizadas</p>
               </div>
-              <p className="text-2xl font-bold text-orange-600">
-                {Math.round(dadosFiltrados.reduce((acc, item) => {
-                  const tarefa = tarefas?.find(t => t.id === item.tarefa)
-                  return acc + (tarefa?.tempo_estimado || 30)
-                }, 0) / 60)}h
-              </p>
-              <p className="text-xs text-gray-600">estimado</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="w-4 h-4 text-purple-500" />
-                <span className="text-sm font-medium">Concluídas</span>
-              </div>
-              <p className="text-2xl font-bold text-purple-600">
-                {dadosFiltrados.filter(item => item.status === 'concluida').length}
-              </p>
-              <p className="text-xs text-gray-600">finalizadas</p>
-            </CardContent>
-          </Card>
+              <CheckCircle2 className="w-5 h-5 text-purple-400 opacity-60" />
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Legenda de categorias */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <span>🏷️</span>
-            Legenda de Categorias
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-            {Object.entries(categoriasCores).map(([categoria, cor]) => (
-              <div key={categoria} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                <div className={`w-3 h-3 rounded-full ${cor}`} />
-                <span className="text-sm capitalize">{categoria}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Legenda de categorias - Minimalista */}
+      <div className="bg-white/40 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-sm font-medium text-gray-600">Legenda de Categorias</span>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {Object.entries(categoriasCores).map(([categoria, cor]) => (
+            <div key={categoria} className="flex items-center gap-1.5">
+              <div className={`w-2.5 h-2.5 rounded-full ${cor}`} />
+              <span className="text-xs text-gray-600 capitalize">{categoria}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Visualização */}
       {visualizacao === 'timeline' ? <TimelineView /> :
