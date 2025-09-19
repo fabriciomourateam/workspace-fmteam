@@ -1390,40 +1390,73 @@ function Cronograma() {
 
 
 
-      {/* Resumo do dia - Micro Compacto */}
+      {/* Resumo do dia - Compacto Melhorado */}
       {dadosFiltrados.length > 0 && (
-        <div className="flex items-center justify-between bg-white/30 backdrop-blur-sm rounded px-3 py-1.5 text-xs border border-white/20">
-          <div className="flex items-center gap-4">
-            <span className="text-gray-600">
-              <strong className="text-blue-600">{dadosFiltrados.length}</strong> agendamentos
-            </span>
-            <span className="text-gray-600">
-              <strong className="text-green-600">{new Set(dadosFiltrados.map(item => item.funcionario)).size}</strong> ativos
-            </span>
-            <span className="text-gray-600">
-              <strong className="text-orange-600">
-                {Math.round(dadosFiltrados.reduce((acc, item) => {
-                  const tarefa = tarefas?.find(t => t.id === item.tarefa)
-                  return acc + (tarefa?.tempo_estimado || 30)
-                }, 0) / 60)}h
-              </strong> estimado
-            </span>
-            <span className="text-gray-600">
-              <strong className="text-purple-600">{dadosFiltrados.filter(item => item.status === 'concluida').length}</strong> concluídas
-            </span>
-          </div>
-          
-          {/* Legenda inline */}
-          <div className="flex items-center gap-2 text-xs">
-            {Object.entries(categoriasCores).slice(0, 4).map(([categoria, cor]) => (
-              <div key={categoria} className="flex items-center gap-1">
-                <div className={`w-1.5 h-1.5 rounded-full ${cor}`} />
-                <span className="text-gray-500 capitalize">{categoria}</span>
+        <div className="bg-white/50 backdrop-blur-sm rounded-lg p-4 border border-white/20 shadow-sm">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            {/* Estatísticas principais */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Calendar className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-gray-700">Total</span>
+                </div>
+                <p className="text-xl font-bold text-blue-600">{dadosFiltrados.length}</p>
+                <p className="text-xs text-gray-500">agendamentos</p>
               </div>
-            ))}
-            {Object.keys(categoriasCores).length > 4 && (
-              <span className="text-gray-400">+{Object.keys(categoriasCores).length - 4}</span>
-            )}
+              
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Users className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-medium text-gray-700">Ativos</span>
+                </div>
+                <p className="text-xl font-bold text-green-600">
+                  {new Set(dadosFiltrados.map(item => item.funcionario)).size}
+                </p>
+                <p className="text-xs text-gray-500">funcionários</p>
+              </div>
+
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Clock className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm font-medium text-gray-700">Tempo</span>
+                </div>
+                <p className="text-xl font-bold text-orange-600">
+                  {Math.round(dadosFiltrados.reduce((acc, item) => {
+                    const tarefa = tarefas?.find(t => t.id === item.tarefa)
+                    return acc + (tarefa?.tempo_estimado || 30)
+                  }, 0) / 60)}h
+                </p>
+                <p className="text-xs text-gray-500">estimado</p>
+              </div>
+
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <CheckCircle2 className="w-4 h-4 text-purple-500" />
+                  <span className="text-sm font-medium text-gray-700">Concluídas</span>
+                </div>
+                <p className="text-xl font-bold text-purple-600">
+                  {dadosFiltrados.filter(item => item.status === 'concluida').length}
+                </p>
+                <p className="text-xs text-gray-500">finalizadas</p>
+              </div>
+            </div>
+            
+            {/* Separador vertical */}
+            <div className="hidden lg:block w-px h-16 bg-gray-300"></div>
+            
+            {/* Legenda de categorias - mais à direita */}
+            <div className="flex flex-col items-start lg:items-end gap-2 lg:min-w-[300px]">
+              <span className="font-medium text-gray-600 text-sm">Categorias:</span>
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                {Object.entries(categoriasCores).map(([categoria, cor]) => (
+                  <div key={categoria} className="flex items-center gap-1.5">
+                    <div className={`w-3 h-3 rounded-full ${cor}`} />
+                    <span className="text-gray-600 capitalize text-sm">{categoria}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
