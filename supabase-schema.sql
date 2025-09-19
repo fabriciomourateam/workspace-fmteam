@@ -134,6 +134,21 @@ INSERT INTO processos (tarefa_id, titulo, descricao, tempo_estimado, frequencia,
 -- ALTER TABLE agenda ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE processos ENABLE ROW LEVEL SECURITY;
 
+-- Tabela de preferências do usuário
+CREATE TABLE user_preferences (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL, -- Identificador do usuário (pode ser IP, session, etc.)
+  preference_type TEXT NOT NULL, -- 'column_widths', 'column_order', etc.
+  preference_data JSONB NOT NULL, -- Dados da preferência em JSON
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, preference_type)
+);
+
 -- Políticas para a tabela processos (permitir acesso total por enquanto)
 CREATE POLICY "Permitir acesso total aos processos" ON processos
+  FOR ALL USING (true) WITH CHECK (true);
+
+-- Políticas para a tabela user_preferences (permitir acesso total por enquanto)
+CREATE POLICY "Permitir acesso total às preferências" ON user_preferences
   FOR ALL USING (true) WITH CHECK (true);

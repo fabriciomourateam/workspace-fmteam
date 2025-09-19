@@ -3,12 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Clock, User, Users, Filter, Calendar, ChevronLeft, ChevronRight, Grid3X3, List, BarChart3, CheckCircle2, X, Move } from 'lucide-react'
+import { Clock, User, Users, Filter, Calendar, ChevronLeft, ChevronRight, Grid3X3, List, BarChart3, CheckCircle2, X, Move, ArrowLeft, ArrowRight, Shuffle, RotateCcw, Trash2 } from 'lucide-react'
 import { useFuncionarios, useTarefas, useAgenda } from '../hooks/useApi'
 import { Loading } from './ui/loading'
 import { ErrorMessage } from './ui/error'
 import AgendamentoForm from './forms/AgendamentoForm'
 import supabaseService from '../services/supabase'
+import userPreferencesService from '../services/userPreferences'
 import { formatarHorarioIntervalo } from '../utils/timeUtils'
 import { usePersonalizacao } from '../hooks/usePersonalizacao'
 
@@ -27,6 +28,9 @@ function Cronograma() {
   const [funcionarioSelecionado, setFuncionarioSelecionado] = useState('todos')
   const [visualizacao, setVisualizacao] = useState('vertical')
   const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0])
+  
+  // Estado para ordem das colunas de funcionários
+  const [ordemColunas, setOrdemColunas] = useState([])
 
   // Estados para seleção múltipla
   const [modoSelecaoMultipla, setModoSelecaoMultipla] = useState(false)
@@ -46,10 +50,7 @@ function Cronograma() {
   const showError = (message) => alert('Erro: ' + message)
 
   // Estado para larguras das colunas redimensionáveis
-  const [columnWidths, setColumnWidths] = useState(() => {
-    const saved = localStorage.getItem('cronograma-column-widths')
-    return saved ? JSON.parse(saved) : {}
-  })
+  const [columnWidths, setColumnWidths] = useState({})
   const [isResizing, setIsResizing] = useState(false)
   const [resizingColumn, setResizingColumn] = useState(null)
 
@@ -67,13 +68,44 @@ function Cronograma() {
     }
   }, [isDragging])
 
-  // Salvar larguras das colunas no localStorage
+  // Carregar preferências da nuvem na inicialização
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        // Carregar larguras das colunas
+        const widths = await userPreferencesService.loadColumnWidths()
+        if (Object.keys(widths).length > 0) {
+          setColumnWidths(widths)
+        }
+
+        // Carregar ordem das colunas
+        const order = await userPreferencesService.loadColumnOrder()
+        if (order.length > 0) {
+          setOrdemColunas(order)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar preferências:', error)
+      }
+    }
+
+    loadPreferences()
+  }, [])
+
+  // Salvar larguras das colunas na nuvem
   useEffect(() => {
     if (Object.keys(columnWidths).length > 0) {
-      console.log('💾 Salvando larguras das colunas:', columnWidths)
-      localStorage.setItem('cronograma-column-widths', JSON.stringify(columnWidths))
+      console.log('💾 Salvando larguras das colunas na nuvem:', columnWidths)
+      userPreferencesService.saveColumnWidths(columnWidths)
     }
   }, [columnWidths])
+
+  // Salvar ordem das colunas na nuvem
+  useEffect(() => {
+    if (ordemColunas.length > 0) {
+      console.log('💾 Salvando ordem das colunas na nuvem:', ordemColunas)
+      userPreferencesService.saveColumnOrder(ordemColunas)
+    }
+  }, [ordemColunas])
 
   // Funções para redimensionamento de colunas
   const handleMouseDown = (e, columnId) => {
@@ -113,15 +145,69 @@ function Cronograma() {
     return width
   }
 
-  const resetColumnWidths = () => {
+  // Funções para trocar colunas
+  const trocarColunas = (indiceA, indiceB) => {
+    const novaOrdem = [...ordemColunas]
+    const temp = novaOrdem[indiceA]
+    novaOrdem[indiceA] = novaOrdem[indiceB]
+    novaOrdem[indiceB] = temp
+    setOrdemColunas(novaOrdem)
+  }
+
+  const moverColuna = (funcionarioId, direcao) => {
+    const indiceAtual = ordemColunas.indexOf(funcionarioId)
+    if (indiceAtual === -1) return
+
+    const novoIndice = direcao === 'esquerda' ? indiceAtual - 1 : indiceAtual + 1
+    
+    if (novoIndice >= 0 && novoIndice < ordemColunas.length) {
+      trocarColunas(indiceAtual, novoIndice)
+    }
+  }
+
+  const resetarOrdemColunas = async () => {
+    if (funcionarios) {
+      const ordemPadrao = funcionarios
+        .filter(f => f.id && f.id.trim() !== '')
+        .map(f => f.id)
+      setOrdemColunas(ordemPadrao)
+      
+      // Limpar da nuvem e localStorage
+      await userPreferencesService.saveColumnOrder(ordemPadrao)
+      localStorage.removeItem('cronograma-ordem-colunas')
+    }
+  }
+
+  const resetColumnWidths = async () => {
     setColumnWidths({})
+    await userPreferencesService.saveColumnWidths({})
     localStorage.removeItem('cronograma-column-widths')
+  }
+
+  const syncPreferences = async () => {
+    try {
+      await userPreferencesService.syncAllPreferences()
+      alert('✅ Preferências sincronizadas com a nuvem!')
+    } catch (error) {
+      console.error('Erro ao sincronizar:', error)
+      alert('❌ Erro ao sincronizar preferências')
+    }
   }
 
   // Carrega dados da API
   const { data: funcionarios, loading: loadingFuncionarios, error: errorFuncionarios, refetch: refetchFuncionarios } = useFuncionarios()
   const { data: tarefas, loading: loadingTarefas, error: errorTarefas, refetch: refetchTarefas } = useTarefas()
   const { data: agenda, loading: loadingAgenda, error: errorAgenda, refetch: refetchAgenda } = useAgenda()
+
+  // Inicializar ordem das colunas quando funcionários carregam
+  useEffect(() => {
+    if (funcionarios && funcionarios.length > 0 && ordemColunas.length === 0) {
+      const ordemInicial = funcionarios
+        .filter(f => f.id && f.id.trim() !== '')
+        .map(f => f.id)
+      setOrdemColunas(ordemInicial)
+    }
+  }, [funcionarios, ordemColunas.length])
 
   // Estados de loading e error
   const isLoading = loadingFuncionarios || loadingTarefas || loadingAgenda
@@ -175,11 +261,15 @@ function Cronograma() {
   }
 
   const handleEditAgendamento = (agendamento) => {
+    console.log('🔍 Dados do agendamento clicado:', agendamento)
+    
     const agendamentoFormatado = {
       ...agendamento,
       funcionario_id: agendamento.funcionario || agendamento.funcionario_id,
       tarefa_id: agendamento.tarefa || agendamento.tarefa_id
     }
+    
+    console.log('📝 Agendamento formatado para o modal:', agendamentoFormatado)
     setEditingAgendamento(agendamentoFormatado)
     setAgendamentoFormOpen(true)
   }
@@ -338,6 +428,36 @@ function Cronograma() {
   const cancelarSelecaoMultipla = () => {
     setTarefasSelecionadas(new Set())
     setModoSelecaoMultipla(false)
+  }
+
+  const excluirTarefasSelecionadas = async () => {
+    if (tarefasSelecionadas.size === 0) {
+      showError('Nenhuma tarefa selecionada')
+      return
+    }
+
+    // Confirmar exclusão
+    const confirmacao = window.confirm(
+      `Deseja realmente excluir ${tarefasSelecionadas.size} agendamento(s) selecionado(s)?\n\nEsta ação não pode ser desfeita.`
+    )
+
+    if (!confirmacao) {
+      return
+    }
+
+    try {
+      const promises = Array.from(tarefasSelecionadas).map(tarefaId => {
+        return supabaseService.deleteAgendamento(tarefaId)
+      })
+
+      await Promise.all(promises)
+      showSuccess(`${tarefasSelecionadas.size} agendamento(s) excluído(s) com sucesso!`)
+      setTarefasSelecionadas(new Set())
+      setModoSelecaoMultipla(false)
+      refetchAgenda()
+    } catch (error) {
+      showError('Erro ao excluir agendamentos: ' + error.message)
+    }
   }
 
   // Funções de drag and drop
@@ -541,6 +661,21 @@ function Cronograma() {
 
     return resultado
   }, [funcionarios, tarefas, dadosFiltrados, horarios, funcionarioSelecionado])
+
+  // Funcionários ordenados pela ordem das colunas
+  const funcionariosOrdenados = useMemo(() => {
+    if (!funcionarios || ordemColunas.length === 0) return []
+    
+    const funcionariosFiltrados = funcionarioSelecionado === 'todos'
+      ? funcionarios.filter(f => f.id && f.id.trim() !== '')
+      : funcionarios.filter(f => f.id === funcionarioSelecionado)
+
+    // Ordenar de acordo com a ordem das colunas
+    return ordemColunas
+      .map(id => funcionariosFiltrados.find(f => f.id === id))
+      .filter(Boolean) // Remove undefined
+      .concat(funcionariosFiltrados.filter(f => !ordemColunas.includes(f.id))) // Adiciona novos funcionários
+  }, [funcionarios, ordemColunas, funcionarioSelecionado])
 
   // Loading state
   if (isLoading) {
@@ -827,11 +962,47 @@ function Cronograma() {
   const GridVerticalView = () => (
     <Card className={isResizing ? 'select-none' : ''}>
       <CardHeader>
-        <CardTitle>Grade Vertical de Horários</CardTitle>
-        <CardDescription>
-          Visualização em grade vertical com horários nas linhas
-          {isResizing && <span className="text-blue-600 ml-2">(Redimensionando...)</span>}
-        </CardDescription>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>Grade Vertical de Horários</CardTitle>
+            <CardDescription>
+              Visualização em grade vertical com horários nas linhas
+              {isResizing && <span className="text-blue-600 ml-2">(Redimensionando...)</span>}
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetarOrdemColunas}
+              className="text-xs"
+              title="Resetar ordem original das colunas"
+            >
+              <RotateCcw className="w-3 h-3 mr-1" />
+              Resetar Ordem
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetColumnWidths}
+              className="text-xs"
+              title="Resetar larguras das colunas"
+            >
+              <RotateCcw className="w-3 h-3 mr-1" />
+              Resetar Larguras
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={syncPreferences}
+              className="text-xs"
+              title="Sincronizar preferências com a nuvem"
+            >
+              <Shuffle className="w-3 h-3 mr-1" />
+              Sincronizar
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent style={{ cursor: isResizing ? 'col-resize' : 'default' }}>
         <div className="overflow-x-auto" style={{ position: 'relative' }}>
@@ -841,18 +1012,40 @@ function Cronograma() {
                 <th className="border border-gray-200 p-2 bg-gray-50 text-center font-medium text-xs" style={{ width: '120px' }}>
                   Horário
                 </th>
-                {Object.values(cronogramaPorFuncionario).map(funcionario => (
+                {funcionariosOrdenados.map((funcionario, index) => (
                   <th
                     key={funcionario.id}
                     className="border border-gray-200 p-1 bg-gray-50 text-center font-medium text-xs relative"
                     style={{ width: `${getColumnWidth(funcionario.id)}px`, minWidth: '60px' }}
                   >
                     <div className="flex flex-col items-center justify-center space-y-1">
-                      <div
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: funcionario.cor }}
-                      />
-                      <span className="text-xs leading-tight">{funcionario.nome}</span>
+                      <div className="flex items-center justify-center space-x-1">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: funcionario.cor }}
+                        />
+                        <span className="text-xs leading-tight">{funcionario.nome}</span>
+                      </div>
+                      
+                      {/* Controles de troca de coluna */}
+                      <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => moverColuna(funcionario.id, 'esquerda')}
+                          disabled={index === 0}
+                          className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Mover coluna para a esquerda"
+                        >
+                          <ArrowLeft className="w-2.5 h-2.5" />
+                        </button>
+                        <button
+                          onClick={() => moverColuna(funcionario.id, 'direita')}
+                          disabled={index === funcionariosOrdenados.length - 1}
+                          className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Mover coluna para a direita"
+                        >
+                          <ArrowRight className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Handle de redimensionamento */}
@@ -876,7 +1069,7 @@ function Cronograma() {
                       {formatarHorarioIntervalo(horario)}
                     </div>
                   </td>
-                  {Object.values(cronogramaPorFuncionario).map(funcionario => (
+                  {funcionariosOrdenados.map(funcionario => (
                     <td
                       key={funcionario.id}
                       className="border border-gray-200 p-1"
@@ -885,7 +1078,7 @@ function Cronograma() {
                     >
                       <TarefaCard
                         key={`task-${funcionario.id}-${horario}`}
-                        tarefa={funcionario.tarefas[horario]}
+                        tarefa={cronogramaPorFuncionario[funcionario.id]?.tarefas[horario]}
                         horario={horario}
                         funcionarioId={funcionario.id}
                       />
@@ -1094,6 +1287,17 @@ function Cronograma() {
                       >
                         <CheckCircle2 className="w-3 h-3 mr-1" />
                         Concluir ({tarefasSelecionadas.size})
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={excluirTarefasSelecionadas}
+                        className="text-white hover:bg-red-500/20 px-2 py-1 text-xs hover:text-red-200"
+                        disabled={tarefasSelecionadas.size === 0}
+                        title="Excluir agendamentos selecionados"
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Excluir ({tarefasSelecionadas.size})
                       </Button>
                       <Button
                         variant="ghost"

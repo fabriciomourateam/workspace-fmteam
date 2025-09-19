@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -24,18 +24,52 @@ export default function AgendamentoForm({
   // Hook de personalização
   const { getClassesDensidade } = usePersonalizacao()
   
-  const [formData, setFormData] = useState({
-    horarios: agendamento?.horario ? [agendamento.horario] : (horarioInicial ? [horarioInicial] : []),
-    funcionarios_ids: agendamento?.funcionario_id ? [agendamento.funcionario_id] : (funcionarioInicial ? [funcionarioInicial] : []),
-    tarefa_id: agendamento?.tarefa_id || '',
-    data: agendamento?.data || dataInicial || new Date().toISOString().split('T')[0],
-    duracao: agendamento?.duracao || '30'
+  const [formData, setFormData] = useState(() => {
+    console.log('🎯 AgendamentoForm - Dados recebidos:', { agendamento, horarioInicial, funcionarioInicial, dataInicial })
+    
+    const dados = {
+      horarios: agendamento?.horario ? [agendamento.horario] : (horarioInicial ? [horarioInicial] : []),
+      funcionarios_ids: agendamento?.funcionario_id ? [agendamento.funcionario_id] : (funcionarioInicial ? [funcionarioInicial] : []),
+      tarefa_id: agendamento?.tarefa_id || '',
+      data: agendamento?.data || dataInicial || new Date().toISOString().split('T')[0],
+      duracao: agendamento?.duracao || '30'
+    }
+    
+    console.log('📋 FormData inicializado com:', dados)
+    return dados
   })
 
   const [tipoAgendamento, setTipoAgendamento] = useState('unico') // 'unico' ou 'recorrente'
   const [diasSelecionados, setDiasSelecionados] = useState([])
   const [dataInicio, setDataInicio] = useState(new Date().toISOString().split('T')[0])
   const [dataFim, setDataFim] = useState('')
+
+  // Atualizar formData quando agendamento mudar
+  useEffect(() => {
+    if (agendamento) {
+      console.log('🔄 Atualizando formData com novo agendamento:', agendamento)
+      
+      const novosDados = {
+        horarios: agendamento.horario ? [agendamento.horario] : [],
+        funcionarios_ids: agendamento.funcionario_id ? [agendamento.funcionario_id] : [],
+        tarefa_id: agendamento.tarefa_id || '',
+        data: agendamento.data || new Date().toISOString().split('T')[0],
+        duracao: agendamento.duracao || '30'
+      }
+      
+      console.log('📝 Novos dados do form:', novosDados)
+      setFormData(novosDados)
+    } else {
+      // Reset para novo agendamento
+      setFormData({
+        horarios: horarioInicial ? [horarioInicial] : [],
+        funcionarios_ids: funcionarioInicial ? [funcionarioInicial] : [],
+        tarefa_id: '',
+        data: dataInicial || new Date().toISOString().split('T')[0],
+        duracao: '30'
+      })
+    }
+  }, [agendamento, horarioInicial, funcionarioInicial, dataInicial])
 
   const diasSemana = [
     { id: 0, nome: 'Domingo', abrev: 'Dom' },
@@ -250,7 +284,7 @@ export default function AgendamentoForm({
           </DialogTitle>
           <DialogDescription>
             {agendamento 
-              ? 'Edite o agendamento abaixo.'
+              ? 'Edite o agendamento abaixo. Você pode trocar a tarefa por qualquer outra disponível.'
               : 'Agende uma tarefa para um funcionário.'
             }
           </DialogDescription>
@@ -494,9 +528,11 @@ export default function AgendamentoForm({
           </div>
 
           <div className={getClassesDensidade('spacing')}>
-            <Label htmlFor="tarefa" className={getClassesDensidade('text')}>Tarefa</Label>
+            <Label htmlFor="tarefa" className={getClassesDensidade('text')}>
+              Tarefa {agendamento && <span className="text-blue-600 text-sm">(clique para trocar)</span>}
+            </Label>
             <Select value={formData.tarefa_id} onValueChange={(value) => handleChange('tarefa_id', value)}>
-              <SelectTrigger className={getClassesDensidade('card')}>
+              <SelectTrigger className={`${getClassesDensidade('card')} ${agendamento ? 'ring-2 ring-blue-200 border-blue-300' : ''}`}>
                 <SelectValue placeholder="Selecione a tarefa" />
               </SelectTrigger>
               <SelectContent>
@@ -505,13 +541,18 @@ export default function AgendamentoForm({
                     <div className="flex flex-col">
                       <span className={`font-medium ${getClassesDensidade('text')}`}>{tarefa.nome}</span>
                       <span className={`${getClassesDensidade('text')} text-gray-500 opacity-75`}>
-                        30min - {tarefa.categoria}
+                        {tarefa.tempo_estimado || 30}min - {tarefa.categoria}
                       </span>
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {agendamento && (
+              <p className="text-sm text-gray-600 mt-1">
+                💡 Dica: Selecione uma tarefa diferente para substituir a atual no mesmo horário
+              </p>
+            )}
           </div>
 
           {/* Resumo das combinações */}
@@ -558,7 +599,7 @@ export default function AgendamentoForm({
               type="submit" 
               disabled={loading}
             >
-              {loading ? 'Salvando...' : (agendamento ? 'Salvar' : 'Criar Agendamentos')}
+              {loading ? 'Salvando...' : (agendamento ? 'Atualizar Tarefa' : 'Criar Agendamentos')}
             </Button>
           </div>
         </form>
