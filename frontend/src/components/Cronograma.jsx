@@ -1393,9 +1393,9 @@ function Cronograma() {
       {/* Resumo do dia - Compacto Melhorado */}
       {dadosFiltrados.length > 0 && (
         <div className="bg-white/50 backdrop-blur-sm rounded-lg p-4 border border-white/20 shadow-sm">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-center justify-between gap-8">
             {/* Estatísticas principais */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Calendar className="w-4 h-4 text-blue-500" />
@@ -1442,20 +1442,24 @@ function Cronograma() {
               </div>
             </div>
             
-            {/* Separador vertical */}
-            <div className="hidden lg:block w-px h-16 bg-gray-300"></div>
+            {/* Legenda de categorias - extrema direita, sem título */}
+            <div className="hidden lg:flex flex-wrap items-center gap-3 text-sm">
+              {Object.entries(categoriasCores).map(([categoria, cor]) => (
+                <div key={categoria} className="flex items-center gap-1.5">
+                  <div className={`w-3 h-3 rounded-full ${cor}`} />
+                  <span className="text-gray-600 capitalize text-sm">{categoria}</span>
+                </div>
+              ))}
+            </div>
             
-            {/* Legenda de categorias - mais à direita */}
-            <div className="flex flex-col items-start lg:items-end gap-2 lg:min-w-[300px]">
-              <span className="font-medium text-gray-600 text-sm">Categorias:</span>
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                {Object.entries(categoriasCores).map(([categoria, cor]) => (
-                  <div key={categoria} className="flex items-center gap-1.5">
-                    <div className={`w-3 h-3 rounded-full ${cor}`} />
-                    <span className="text-gray-600 capitalize text-sm">{categoria}</span>
-                  </div>
-                ))}
-              </div>
+            {/* Legenda mobile - abaixo das estatísticas */}
+            <div className="lg:hidden mt-4 flex flex-wrap items-center gap-3 text-sm">
+              {Object.entries(categoriasCores).map(([categoria, cor]) => (
+                <div key={categoria} className="flex items-center gap-1.5">
+                  <div className={`w-3 h-3 rounded-full ${cor}`} />
+                  <span className="text-gray-600 capitalize text-sm">{categoria}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
