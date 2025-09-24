@@ -1,43 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "frontend/dist",
-        "buildCommand": "cd frontend && npm run build"
-      }
-    },
-    {
-      "src": "api/funcionarios.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/tarefas.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/agenda.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/funcionarios",
-      "dest": "/api/funcionarios.py"
-    },
-    {
-      "src": "/api/tarefas",
-      "dest": "/api/tarefas.py"
-    },
-    {
-      "src": "/api/agenda",
-      "dest": "/api/agenda.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/dist/$1"
-    }
-  ]
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "npm install",
+  "framework": null
 }
