@@ -1,5 +1,11 @@
 {
-  "dependencies": {
-    "@supabase/supabase-js": "^2.56.0"
+  "name": "workspace-fmteam",
+  "version": "1.0.0",
+  "description": "Workspace FMTEAM - Sistema de gerenciamento de equipe",
+  "scripts": {
+    "vercel-build": "cd frontend && npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
