@@ -1,9 +1,13 @@
 {
-  "name": "workspace-fmteam",
-  "version": "1.0.0",
-  "description": "Workspace FMTEAM - Sistema de gerenciamento de equipe",
+  "name": "workspace-visual",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
+    "dev": "cd frontend && npm run dev",
     "build": "cd frontend && npm install && npm run build",
+    "lint": "cd frontend && npm run lint",
+    "preview": "cd frontend && npm run preview",
     "vercel-build": "cd frontend && npm install && npm run build"
   },
   "engines": {
