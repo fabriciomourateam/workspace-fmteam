@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,9 @@ function Cronograma() {
   
   // Estado para ordem das colunas de funcionários
   const [ordemColunas, setOrdemColunas] = useState([])
+  
+  // Estado para linha do tempo atual
+  const [horarioAtual, setHorarioAtual] = useState(new Date())
 
   // Estados para seleção múltipla
   const [modoSelecaoMultipla, setModoSelecaoMultipla] = useState(false)
@@ -208,6 +211,82 @@ function Cronograma() {
       setOrdemColunas(ordemInicial)
     }
   }, [funcionarios, ordemColunas.length])
+
+  // Atualizar horário atual a cada minuto
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Usar horário de São Paulo
+      const agora = new Date()
+      const horarioSaoPaulo = new Date(agora.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}))
+      setHorarioAtual(horarioSaoPaulo)
+    }, 60000) // Atualiza a cada minuto
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Função para calcular a posição da linha do tempo atual
+  const getCurrentTimePosition = () => {
+    // Obter horário atual de São Paulo (UTC-3)
+    const agora = new Date()
+    const horarioSaoPaulo = new Date(agora.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}))
+    
+    const horaAtual = horarioSaoPaulo.getHours()
+    const minutoAtual = horarioSaoPaulo.getMinutes()
+    
+    // Debug: mostrar horário atual
+    console.log('🕐 Horário atual São Paulo:', `${horaAtual.toString().padStart(2, '0')}:${minutoAtual.toString().padStart(2, '0')}`)
+    
+    // Converter para formato HH:MM
+    const horarioAtualStr = `${horaAtual.toString().padStart(2, '0')}:${minutoAtual.toString().padStart(2, '0')}`
+    
+    // Verificar se está dentro do horário de trabalho (8h às 20h)
+    if (horaAtual < 8 || horaAtual >= 20) {
+      console.log('❌ Fora do horário de trabalho')
+      return null // Fora do horário de trabalho
+    }
+    
+    // Encontrar o índice do horário atual nos horários disponíveis
+    const indiceAtual = horarios.findIndex(horario => horario === horarioAtualStr)
+    console.log('📍 Índice atual encontrado:', indiceAtual, 'para horário:', horarioAtualStr)
+    
+    if (indiceAtual === -1) {
+      // Se não encontrou exato, calcular posição entre horários
+      // Encontrar o último horário que é menor ou igual ao atual
+      let horarioAnterior = null
+      let indiceAnterior = -1
+      
+      for (let i = horarios.length - 1; i >= 0; i--) {
+        if (horarios[i] <= horarioAtualStr) {
+          horarioAnterior = horarios[i]
+          indiceAnterior = i
+          break
+        }
+      }
+      
+      // Encontrar o primeiro horário que é maior que o atual
+      const horarioPosterior = horarios.find(h => h > horarioAtualStr)
+      
+      console.log('🔍 Horário anterior:', horarioAnterior, 'Posterior:', horarioPosterior, 'Índice anterior:', indiceAnterior)
+      
+      if (horarioAnterior && horarioPosterior && indiceAnterior >= 0) {
+        const [horaAnt, minAnt] = horarioAnterior.split(':').map(Number)
+        const [horaPost, minPost] = horarioPosterior.split(':').map(Number)
+        
+        const minutosAnt = horaAnt * 60 + minAnt
+        const minutosPost = horaPost * 60 + minPost
+        const minutosAtual = horaAtual * 60 + minutoAtual
+        
+        const progresso = (minutosAtual - minutosAnt) / (minutosPost - minutosAnt)
+        const posicaoFinal = indiceAnterior + progresso
+        
+        console.log('📊 Posição calculada:', posicaoFinal)
+        return posicaoFinal
+      }
+    }
+    
+    console.log('✅ Retornando índice:', indiceAtual)
+    return indiceAtual
+  }
 
   // Estados de loading e error
   const isLoading = loadingFuncionarios || loadingTarefas || loadingAgenda
@@ -594,16 +673,16 @@ function Cronograma() {
     return filtrados
   }, [agenda, funcionarioSelecionado, dataSelecionada])
 
-  // Horários de 8h às 19h30
+  // Horários de 8h às 20h
   const horarios = useMemo(() => {
     const todosHorarios = []
-    for (let h = 8; h <= 19; h++) {
+    for (let h = 8; h <= 20; h++) {
       for (let m = 0; m < 60; m += 30) {
         const hora = h.toString().padStart(2, '0')
         const minuto = m.toString().padStart(2, '0')
         todosHorarios.push(`${hora}:${minuto}`)
 
-        if (h === 19 && m === 30) break
+        if (h === 20 && m === 0) break
       }
     }
     return todosHorarios
@@ -1062,30 +1141,61 @@ function Cronograma() {
               </tr>
             </thead>
             <tbody>
-              {horarios.map(horario => (
-                <tr key={horario}>
-                  <td className="border border-gray-200 p-2 font-medium bg-gray-50">
-                    <div className="text-center text-xs">
-                      {formatarHorarioIntervalo(horario)}
-                    </div>
-                  </td>
-                  {funcionariosOrdenados.map(funcionario => (
-                    <td
-                      key={funcionario.id}
-                      className="border border-gray-200 p-1"
-                      style={{ width: `${getColumnWidth(funcionario.id)}px` }}
-                      data-cell={`${funcionario.id}-${horario}`}
-                    >
-                      <TarefaCard
-                        key={`task-${funcionario.id}-${horario}`}
-                        tarefa={cronogramaPorFuncionario[funcionario.id]?.tarefas[horario]}
-                        horario={horario}
-                        funcionarioId={funcionario.id}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {horarios.map((horario, index) => {
+                const posicaoTempoAtual = getCurrentTimePosition()
+                const mostrarLinhaTempo = posicaoTempoAtual !== null && 
+                  Math.floor(posicaoTempoAtual) === index && 
+                  dataSelecionada === new Date().toISOString().split('T')[0]
+                
+                // Debug: mostrar quando a linha deve aparecer
+                if (posicaoTempoAtual !== null && Math.floor(posicaoTempoAtual) === index) {
+                  console.log('🎯 Linha deve aparecer no índice:', index, 'horário:', horario, 'posição:', posicaoTempoAtual, 'data:', dataSelecionada, 'hoje:', new Date().toISOString().split('T')[0])
+                }
+                
+                
+                return (
+                  <React.Fragment key={horario}>
+                    <tr>
+                      <td className="border border-gray-200 p-2 font-medium bg-gray-50">
+                        <div className="text-center text-xs">
+                          {formatarHorarioIntervalo(horario)}
+                        </div>
+                      </td>
+                      {funcionariosOrdenados.map(funcionario => (
+                        <td
+                          key={funcionario.id}
+                          className="border border-gray-200 p-1"
+                          style={{ width: `${getColumnWidth(funcionario.id)}px` }}
+                          data-cell={`${funcionario.id}-${horario}`}
+                        >
+                          <TarefaCard
+                            key={`task-${funcionario.id}-${horario}`}
+                            tarefa={cronogramaPorFuncionario[funcionario.id]?.tarefas[horario]}
+                            horario={horario}
+                            funcionarioId={funcionario.id}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                    {/* Linha do tempo atual */}
+                    {mostrarLinhaTempo && (
+                      <tr className="relative">
+                        <td colSpan={funcionariosOrdenados.length + 1} className="p-0">
+                          <div 
+                            className="absolute left-0 right-0 h-0.5 bg-red-500 z-10 shadow-lg"
+                            style={{
+                              top: posicaoTempoAtual % 1 === 0 ? '0px' : `${(posicaoTempoAtual % 1) * 100}%`
+                            }}
+                          >
+                            <div className="absolute -left-2 -top-1 w-3 h-3 bg-red-500 rounded-full shadow-md"></div>
+                            <div className="absolute -right-2 -top-1 w-3 h-3 bg-red-500 rounded-full shadow-md"></div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                )
+              })}
             </tbody>
           </table>
         </div>

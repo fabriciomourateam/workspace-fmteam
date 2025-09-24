@@ -1,4 +1,4 @@
-import supabaseService from './supabase'
+import { supabase } from './supabase'
 
 // Gera um ID único para o usuário (baseado no localStorage ou cria um novo)
 const getUserId = () => {
@@ -15,25 +15,12 @@ class UserPreferencesService {
     this.userId = getUserId()
   }
 
-  // Salvar preferência na nuvem
+  // Salvar preferência (usando localStorage por enquanto)
   async savePreference(type, data) {
     try {
-      const { data: result, error } = await supabaseService.supabase
-        .from('user_preferences')
-        .upsert({
-          user_id: this.userId,
-          preference_type: type,
-          preference_data: data,
-          updated_at: new Date().toISOString()
-        })
-        .select()
-
-      if (error) {
-        console.error('Erro ao salvar preferência:', error)
-        return false
-      }
-
-      console.log(`✅ Preferência ${type} salva na nuvem:`, data)
+      // Usar localStorage diretamente (RLS desativado)
+      localStorage.setItem(`preference_${type}`, JSON.stringify(data))
+      console.log(`✅ Preferência ${type} salva no localStorage:`, data)
       return true
     } catch (error) {
       console.error('Erro ao salvar preferência:', error)
@@ -41,26 +28,15 @@ class UserPreferencesService {
     }
   }
 
-  // Carregar preferência da nuvem
+  // Carregar preferência (usando localStorage por enquanto)
   async loadPreference(type) {
     try {
-      const { data, error } = await supabaseService.supabase
-        .from('user_preferences')
-        .select('preference_data')
-        .eq('user_id', this.userId)
-        .eq('preference_type', type)
-        .single()
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-        console.error('Erro ao carregar preferência:', error)
-        return null
+      // Usar localStorage diretamente (RLS desativado)
+      const localData = localStorage.getItem(`preference_${type}`)
+      if (localData) {
+        console.log(`📥 Preferência ${type} carregada do localStorage:`, JSON.parse(localData))
+        return JSON.parse(localData)
       }
-
-      if (data) {
-        console.log(`📥 Preferência ${type} carregada da nuvem:`, data.preference_data)
-        return data.preference_data
-      }
-
       return null
     } catch (error) {
       console.error('Erro ao carregar preferência:', error)
