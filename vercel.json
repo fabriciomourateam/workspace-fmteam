@@ -7,41 +7,9 @@
       "config": {
         "distDir": "dist"
       }
-    },
-    {
-      "src": "api/funcionarios.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/tarefas.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/agenda.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
     }
   ],
   "routes": [
-    {
-      "src": "/api/funcionarios",
-      "dest": "/api/funcionarios.py"
-    },
-    {
-      "src": "/api/tarefas",
-      "dest": "/api/tarefas.py"
-    },
-    {
-      "src": "/api/agenda",
-      "dest": "/api/agenda.py"
-    },
-    {
-      "src": "/api",
-      "dest": "/api/index.py"
-    },
     {
       "src": "/(.*)",
       "dest": "/frontend/dist/$1"
